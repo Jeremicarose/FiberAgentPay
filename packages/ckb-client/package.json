@@ -1,0 +1,19 @@
+{
+  "name": "@fiber-agent-pay/ckb-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@fiber-agent-pay/core": "workspace:*",
+    "@ckb-ccc/core": "^1.1.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

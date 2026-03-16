@@ -1,0 +1,26 @@
+{
+  "name": "@fiber-agent-pay/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@fiber-agent-pay/core": "workspace:*",
+    "@fiber-agent-pay/fiber-client": "workspace:*",
+    "@fiber-agent-pay/ckb-client": "workspace:*",
+    "@fiber-agent-pay/agents": "workspace:*",
+    "hono": "^4.7.0",
+    "@hono/node-server": "^1.14.0",
+    "ws": "^8.18.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

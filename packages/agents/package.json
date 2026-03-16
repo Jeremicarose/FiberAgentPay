@@ -1,0 +1,21 @@
+{
+  "name": "@fiber-agent-pay/agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@fiber-agent-pay/core": "workspace:*",
+    "@fiber-agent-pay/fiber-client": "workspace:*",
+    "@fiber-agent-pay/ckb-client": "workspace:*",
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
