@@ -10,10 +10,11 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@fiber-agent-pay/core": "workspace:*",
-    "@ckb-ccc/core": "^1.1.1"
+    "@ckb-ccc/core": "^1.1.1",
+    "@fiber-agent-pay/core": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "typescript": "^5.7.0"
   }
 }
