@@ -42,6 +42,9 @@ importers:
 
   packages/core:
     devDependencies:
+      '@types/node':
+        specifier: ^25.5.0
+        version: 25.5.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2141,7 +2144,7 @@ snapshots:
 
   '@types/node-fetch@2.6.13':
     dependencies:
-      '@types/node': 18.19.130
+      '@types/node': 25.5.0
       form-data: 4.0.5
 
   '@types/node@18.19.130':
