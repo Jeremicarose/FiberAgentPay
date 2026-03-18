@@ -1,17 +1,39 @@
+import { useState, useEffect, useCallback } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { Layout } from "./components/Layout";
 import { AgentCard } from "./components/AgentCard";
 import { PaymentFeed } from "./components/PaymentFeed";
 import { WalletInfo } from "./components/WalletInfo";
 import { CreateAgent } from "./components/CreateAgent";
+import { agentsApi } from "./lib/api";
 
 export function App() {
-  const { agents, events, connected } = useWebSocket();
+  const { agents: wsAgents, events, connected } = useWebSocket();
+  const [polledAgents, setPolledAgents] = useState<unknown[]>([]);
+
+  // Use WebSocket agents when available, fall back to polled agents
+  const agents = wsAgents.length > 0 ? wsAgents : polledAgents;
+
+  // Fetch agents from REST API as a fallback / initial load
+  const fetchAgents = useCallback(async () => {
+    try {
+      const data = await agentsApi.list();
+      setPolledAgents(data);
+    } catch {
+      // Server might not be ready yet
+    }
+  }, []);
+
+  // Poll on mount and periodically as backup
+  useEffect(() => {
+    fetchAgents();
+    const interval = setInterval(fetchAgents, 5000);
+    return () => clearInterval(interval);
+  }, [fetchAgents]);
 
   function handleRefresh() {
-    // WebSocket auto-syncs state — no manual refresh needed.
-    // This callback exists for actions that might not trigger
-    // a WebSocket update immediately (like remove).
+    // Fetch fresh data immediately after create/stop/remove
+    fetchAgents();
   }
 
   return (
