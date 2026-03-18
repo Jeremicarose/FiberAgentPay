@@ -90,11 +90,11 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
       </div>
 
       {/* Error display */}
-      {agent.error && (
+      {agent.error ? (
         <div className="mb-3 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400">
           {String(agent.error)}
         </div>
-      )}
+      ) : null}
 
       {/* Actions */}
       <div className="flex gap-2">
