@@ -76,7 +76,7 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
         <div>
           <p className="text-xs text-ckb-muted">Payments</p>
           <p className="text-sm font-mono text-white">
-            {agent.paymentCount as number}
+            {String(agent.paymentCount)}
           </p>
         </div>
         <div>
