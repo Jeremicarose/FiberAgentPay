@@ -109,6 +109,11 @@ export class AgentScheduler extends EventEmitter {
     });
 
     this.agents.set(config.id, agent);
+
+    // Emit a state change so WebSocket sends a fresh snapshot
+    // to all connected dashboards immediately
+    this.emit("agentStateChange", agent.getState());
+
     return agent;
   }
 
