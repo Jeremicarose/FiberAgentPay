@@ -10,12 +10,13 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@fiber-agent-pay/core": "workspace:*",
-    "@fiber-agent-pay/fiber-client": "workspace:*",
+    "@anthropic-ai/sdk": "^0.39.0",
     "@fiber-agent-pay/ckb-client": "workspace:*",
-    "@anthropic-ai/sdk": "^0.39.0"
+    "@fiber-agent-pay/core": "workspace:*",
+    "@fiber-agent-pay/fiber-client": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "typescript": "^5.7.0"
   }
 }

@@ -3,20 +3,16 @@
 # Auto-commit and push script for FiberAgentPay
 # Generates structured commit messages based on what actually changed.
 #
-# Message format: <type>(<scope>): <description>
-#   type  = feat | fix | refactor | style | docs | chore | test
-#   scope = core | fiber-client | ckb-client | agents | server | dashboard |
-#           scripts | config | project
-#
-# Examples:
-#   feat(fiber-client): add channel management RPC methods
-#   feat(agents): add DCA agent with scheduled micropayments
-#   feat(dashboard): add real-time payment feed component
-#   chore(config): update dependencies and build scripts
+# Fixes from v1:
+#   1. git push gets a 30s timeout so it can't hang forever
+#   2. Lock file prevents overlapping runs
+#   3. Excludes build artifacts (dist/, *.tsbuildinfo)
+#   4. Uses git add with explicit paths, not "git add ."
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_FILE="$REPO_ROOT/logs/auto-commit.log"
+LOCK_FILE="$REPO_ROOT/logs/.auto-commit.lock"
 INTERVAL=60  # seconds
 
 mkdir -p "$REPO_ROOT/logs"
@@ -25,42 +21,38 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
+# Cleanup lock on exit
+cleanup() {
+    rm -f "$LOCK_FILE"
+}
+trap cleanup EXIT
+
 # ---------------------------------------------------------------------------
-# Determine the conventional-commit type (feat, fix, refactor, …)
+# Determine the conventional-commit type
 # ---------------------------------------------------------------------------
 detect_type() {
     local added="$1" modified="$2" deleted="$3"
 
-    # If only deletions → chore
     if [[ -z "$added" && -z "$modified" && -n "$deleted" ]]; then
         echo "chore"; return
     fi
-
-    # New files → feat
     if [[ -n "$added" ]]; then
         echo "feat"; return
     fi
-
-    # Config / dependency changes → chore
     if echo "$modified" | grep -qE "(package\.json|tsconfig|\.env|\.gitignore|pnpm-workspace|pnpm-lock)"; then
         echo "chore"; return
     fi
-
-    # Test files → test
     if echo "$modified" | grep -qE "(test|spec|_test)\.(ts|tsx)$"; then
         echo "test"; return
     fi
-
-    # Docs → docs
     if echo "$modified" | grep -qE "\.(md|txt)$" && ! echo "$modified" | grep -qvE "\.(md|txt)$"; then
         echo "docs"; return
     fi
-
     echo "feat"
 }
 
 # ---------------------------------------------------------------------------
-# Determine the scope from file paths (FiberAgentPay monorepo)
+# Determine the scope from file paths
 # ---------------------------------------------------------------------------
 detect_scope() {
     local all_files="$1"
@@ -107,14 +99,13 @@ detect_scope() {
 }
 
 # ---------------------------------------------------------------------------
-# Build a human-readable description of the changes
+# Build a human-readable description
 # ---------------------------------------------------------------------------
 describe_changes() {
     local added="$1" modified="$2" deleted="$3"
     local all_files="$4"
     local desc=""
 
-    # --- Core package (types, config, utils) ---
     if echo "$all_files" | grep -q "packages/core/"; then
         if echo "$added" | grep -q "packages/core/"; then
             desc="${desc:+$desc, }add shared types and config"
@@ -123,7 +114,6 @@ describe_changes() {
         fi
     fi
 
-    # --- Fiber client (RPC, channels, payments) ---
     if echo "$all_files" | grep -q "packages/fiber-client/"; then
         if echo "$all_files" | grep -q "channels"; then
             desc="${desc:+$desc, }add channel management RPC methods"
@@ -136,7 +126,6 @@ describe_changes() {
         fi
     fi
 
-    # --- CKB client (wallet, transactions) ---
     if echo "$all_files" | grep -q "packages/ckb-client/"; then
         if echo "$all_files" | grep -q "wallet"; then
             desc="${desc:+$desc, }add HD wallet management"
@@ -149,7 +138,6 @@ describe_changes() {
         fi
     fi
 
-    # --- Agents (DCA, streaming, commerce) ---
     if echo "$all_files" | grep -q "packages/agents/"; then
         if echo "$all_files" | grep -q "dca-agent"; then
             desc="${desc:+$desc, }add DCA agent with scheduled micropayments"
@@ -168,7 +156,6 @@ describe_changes() {
         fi
     fi
 
-    # --- Server (API routes, WebSocket) ---
     if echo "$all_files" | grep -q "packages/server/"; then
         if echo "$all_files" | grep -q "websocket"; then
             desc="${desc:+$desc, }add WebSocket real-time updates"
@@ -182,7 +169,6 @@ describe_changes() {
         fi
     fi
 
-    # --- Dashboard (React components, hooks) ---
     if echo "$all_files" | grep -q "packages/dashboard/"; then
         if echo "$all_files" | grep -q "components/"; then
             local components=$(echo "$all_files" | grep "components/" | xargs -I{} basename {} .tsx 2>/dev/null | sort -u | tr '\n' ',' | sed 's/,$//')
@@ -200,27 +186,22 @@ describe_changes() {
         fi
     fi
 
-    # --- Dependencies ---
     if echo "$all_files" | grep -q "package\.json"; then
-        # Only mention if nothing more specific was already said
         if [[ -z "$desc" ]]; then
             desc="update dependencies"
         fi
     fi
 
-    # --- pnpm workspace / lockfile ---
     if echo "$all_files" | grep -q "pnpm-workspace\|pnpm-lock"; then
         if [[ -z "$desc" ]]; then
             desc="update workspace configuration"
         fi
     fi
 
-    # --- Scripts ---
     if echo "$all_files" | grep -q "^scripts/"; then
         desc="${desc:+$desc, }update build/deploy scripts"
     fi
 
-    # --- Tests ---
     if echo "$all_files" | grep -q "^tests/"; then
         if echo "$added" | grep -q "^tests/"; then
             desc="${desc:+$desc, }add tests"
@@ -229,13 +210,11 @@ describe_changes() {
         fi
     fi
 
-    # --- Deletions ---
     if [[ -n "$deleted" ]]; then
         local del_count=$(echo "$deleted" | wc -l | xargs)
         desc="${desc:+$desc, }remove $del_count file(s)"
     fi
 
-    # Fallback
     if [[ -z "$desc" ]]; then
         local file_count=$(echo "$all_files" | wc -l | xargs)
         local first_file=$(echo "$all_files" | head -1 | xargs basename 2>/dev/null || echo "files")
@@ -250,7 +229,7 @@ describe_changes() {
 }
 
 # ---------------------------------------------------------------------------
-# Main: generate full commit message
+# Generate commit message from staged files
 # ---------------------------------------------------------------------------
 generate_commit_message() {
     local added=$(git diff --cached --name-only --diff-filter=A)
@@ -266,31 +245,90 @@ generate_commit_message() {
 }
 
 # ---------------------------------------------------------------------------
-# Commit + push
+# Commit + push with timeouts and safety
 # ---------------------------------------------------------------------------
 do_commit() {
-    cd "$REPO_ROOT" || { log "Failed to navigate to repo root"; return 1; }
+    cd "$REPO_ROOT" || { log "ERROR: Failed to cd to repo root"; return 1; }
 
-    if [[ -z $(git status -s) ]]; then
+    # Lock file prevents overlapping runs
+    if [[ -f "$LOCK_FILE" ]]; then
+        local lock_age=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || echo 0) ))
+        if [[ $lock_age -gt 120 ]]; then
+            log "WARN: Stale lock file (${lock_age}s old), removing"
+            rm -f "$LOCK_FILE"
+        else
+            return 0  # Previous run still active, skip
+        fi
+    fi
+    touch "$LOCK_FILE"
+
+    # Check for changes (excluding build artifacts)
+    local changes=$(git status -s --ignore-submodules \
+        | grep -v '\.tsbuildinfo$' \
+        | grep -v '^.. dist/' \
+        | grep -v '^.. node_modules/')
+
+    if [[ -z "$changes" ]]; then
+        rm -f "$LOCK_FILE"
         return 0
     fi
 
     log "Changes detected:"
-    git status -s >> "$LOG_FILE"
+    echo "$changes" >> "$LOG_FILE"
 
-    git add .
+    # Stage everything EXCEPT build artifacts
+    # Using git add with pathspec negation
+    git add --all -- \
+        ':!*.tsbuildinfo' \
+        ':!dist/' \
+        ':!node_modules/' \
+        ':!logs/' 2>/dev/null
+
+    # Check if anything is actually staged
+    if [[ -z $(git diff --cached --name-only) ]]; then
+        log "Nothing staged after filtering build artifacts"
+        rm -f "$LOCK_FILE"
+        return 0
+    fi
 
     local commit_msg=$(generate_commit_message)
     log "Commit: $commit_msg"
-    git commit -m "$commit_msg"
 
-    log "Pushing to origin/main..."
-    if git push origin main 2>&1 | tee -a "$LOG_FILE"; then
-        log "Pushed successfully."
-    else
-        log "Push failed."
+    if ! git commit -m "$commit_msg" >> "$LOG_FILE" 2>&1; then
+        log "ERROR: Commit failed"
+        rm -f "$LOCK_FILE"
         return 1
     fi
+
+    log "Pushing to origin/main..."
+
+    # KEY FIX: timeout on push so it can't hang forever
+    # macOS doesn't have `timeout`, so we use a background job + wait
+    git push origin main >> "$LOG_FILE" 2>&1 &
+    local push_pid=$!
+    local waited=0
+    while kill -0 "$push_pid" 2>/dev/null; do
+        sleep 1
+        waited=$((waited + 1))
+        if [[ $waited -ge 30 ]]; then
+            kill "$push_pid" 2>/dev/null
+            wait "$push_pid" 2>/dev/null
+            log "ERROR: Push timed out after 30s"
+            rm -f "$LOCK_FILE"
+            return 1
+        fi
+    done
+    wait "$push_pid"
+    local exit_code=$?
+    if [[ $exit_code -eq 0 ]]; then
+        log "Pushed successfully."
+    else
+        log "ERROR: Push failed (exit code: $exit_code)"
+        rm -f "$LOCK_FILE"
+        return 1
+    fi
+
+    rm -f "$LOCK_FILE"
 }
 
 # ---------------------------------------------------------------------------
@@ -302,9 +340,9 @@ case "${1:-}" in
         do_commit
         ;;
     --watch|"")
-        log "Auto-commit started (interval: ${INTERVAL}s)"
+        log "=== Auto-commit started (interval: ${INTERVAL}s) ==="
         log "Repo: $REPO_ROOT"
-        log "Press Ctrl+C to stop"
+        log "PID: $$"
         while true; do
             do_commit
             sleep $INTERVAL
