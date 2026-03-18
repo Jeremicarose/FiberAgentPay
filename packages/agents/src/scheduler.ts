@@ -161,6 +161,8 @@ export class AgentScheduler extends EventEmitter {
       }
       agent.removeAllListeners();
       this.agents.delete(id);
+      // Notify dashboards that an agent was removed
+      this.emit("agentStateChange", null);
     }
   }
 
