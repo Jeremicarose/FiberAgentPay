@@ -8,3 +8,11 @@ dist/
 coverage/
 .turbo/
 logs/
+
+# Fiber node data (binary, wallet key, chain state)
+fiber-node/fnn
+fiber-node/fnn-migrate
+fiber-node/fnn.tar.gz
+fiber-node/ckb/
+fiber-node/store/
+fiber-node/config/
