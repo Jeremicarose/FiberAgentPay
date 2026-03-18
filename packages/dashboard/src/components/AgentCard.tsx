@@ -92,7 +92,7 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
       {/* Error display */}
       {agent.error && (
         <div className="mb-3 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400">
-          {agent.error as string}
+          {String(agent.error)}
         </div>
       )}
 
