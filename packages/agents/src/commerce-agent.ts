@@ -255,7 +255,7 @@ export class CommerceAgent extends BaseAgent {
       // Attempt to purchase
       try {
         const payment = await this.safePayment(
-          `commerce-${this.config.id}-${selected.serviceId}-${now()}`,
+          `Purchase "${selected.name}" from ${selected.providerId.slice(0, 8)}`,
           selected.pricePerRequest,
         );
 
