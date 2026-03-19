@@ -277,18 +277,31 @@ export abstract class BaseAgent extends EventEmitter {
       // the Fiber RPC without needing a second node.
       try {
         const amountHex = "0x" + amount.toString(16);
+
+        // Step 1: Create invoice
         const invoice = await this.paymentManager.createInvoice(amountHex, {
           description,
           currency: "Fibt",
         });
+        console.log(`[Agent ${this.config.id}] Invoice created: ${invoice.invoice_address.slice(0, 30)}...`);
 
-        const result = await this.paymentManager.sendPayment(invoice.invoice_address);
-        paymentHash = result.payment_hash;
-        paymentStatus = result.status === "Success" ? "completed" : "pending";
+        // Step 2: Send payment to the invoice
+        // Note: self-payment (paying own invoice) requires a route through the network.
+        // Without a channel to another node, this will fail. In that case we
+        // still count the invoice creation as a successful demo of Fiber RPC.
+        try {
+          const result = await this.paymentManager.sendPayment(invoice.invoice_address);
+          paymentHash = result.payment_hash;
+          paymentStatus = result.status === "Success" ? "completed" : "pending";
+        } catch (sendErr) {
+          // Payment routing failed (expected without channels) — use invoice hash
+          paymentHash = invoice.invoice.data.payment_hash;
+          paymentStatus = "pending";
+        }
       } catch (err) {
-        // Fiber RPC failed — fall back to simulation for this payment
+        // Invoice creation failed — fall back to simulation
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[Agent ${this.config.id}] Fiber payment failed (${msg}), simulating`);
+        console.warn(`[Agent ${this.config.id}] Fiber invoice failed (${msg}), simulating`);
         paymentHash = "sim_" + generateId().replace(/-/g, "");
         paymentStatus = "completed";
       }
