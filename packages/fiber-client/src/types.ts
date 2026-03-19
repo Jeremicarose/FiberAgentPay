@@ -164,6 +164,7 @@ export interface NodeInfoResult {
   version: string;
   commit_hash: string;
   public_key: string;
+  node_id: string;
   node_name: string;
   peer_id: string;
   addresses: string[];
