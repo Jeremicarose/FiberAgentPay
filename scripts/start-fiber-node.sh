@@ -39,6 +39,8 @@ echo "Chain: testnet"
 echo ""
 
 cd "$FIBER_DIR"
-RUST_LOG="${RUST_LOG:-info}" exec ./fnn \
+FIBER_SECRET_KEY_PASSWORD="${FIBER_SECRET_KEY_PASSWORD:-fiberagentpay2026}" \
+RUST_LOG="${RUST_LOG:-info}" \
+exec ./fnn \
   -c config/testnet/config.yml \
   -d .
