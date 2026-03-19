@@ -98,10 +98,7 @@ export class DCAAgent extends BaseAgent {
         // the target peer. For the hackathon demo, we simulate the
         // payment flow through the channel.
         const payment = await this.safePayment(
-          // The invoice would come from the counterparty
-          // For demo purposes, we use a placeholder that the
-          // Fiber client will handle
-          `dca-payment-${this.config.id}-${this.purchasesMade}`,
+          `DCA purchase #${this.purchasesMade + 1}`,
           this.config.amountPerInterval,
         );
 

@@ -80,9 +80,7 @@ export class StreamAgent extends BaseAgent {
       // Send one tick payment
       try {
         const payment = await this.safePayment(
-          // In production, the recipient provides a long-lived invoice
-          // or we use keysend for invoice-less streaming
-          `stream-${this.config.id}-tick-${this.tickCount}`,
+          `Stream tick #${this.tickCount + 1} to ${this.config.recipient}`,
           this.config.amountPerTick,
         );
 

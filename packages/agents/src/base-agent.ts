@@ -199,9 +199,26 @@ export abstract class BaseAgent extends EventEmitter {
     this.emitEvent({ type: "agent:started", agentId: this.config.id, timestamp: now() });
   }
 
-  /** Stop the agent permanently */
+  /** Stop the agent permanently and close any open channel */
   async stop(): Promise<void> {
     this.abortController.abort();
+
+    // Close Fiber channel if one is open
+    if (this.fiberConnected && this.channelId) {
+      try {
+        const lockScript = {
+          code_hash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          hash_type: "type" as const,
+          args: "0x" + "0".repeat(40), // Will be overridden by actual wallet lock
+        };
+        await this.channelManager.shutdownChannel(this.channelId, lockScript);
+        console.log(`[Agent ${this.config.id}] Channel ${this.channelId} closing...`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[Agent ${this.config.id}] Channel close failed: ${msg}`);
+      }
+    }
+
     this.setStatus("stopped");
     this.emitEvent({ type: "agent:stopped", agentId: this.config.id, timestamp: now() });
   }
