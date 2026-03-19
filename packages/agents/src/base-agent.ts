@@ -93,21 +93,48 @@ export abstract class BaseAgent extends EventEmitter {
     this.abortController = new AbortController();
   }
 
+  /** Whether the Fiber node is reachable */
+  protected fiberConnected = false;
+  /** Our Fiber node's public key (for self-invoices) */
+  protected nodePublicKey?: string;
+
   /**
    * Start the agent. This:
-   *   1. Changes status to "running"
-   *   2. Calls the subclass's execute() method
-   *   3. Catches errors and transitions to "error" status
-   *
-   * Why not just call execute() directly?
-   * The base class handles lifecycle transitions and error
-   * boundaries. Subclasses only implement their strategy
-   * logic in execute(), keeping them focused and simple.
+   *   1. Checks Fiber connectivity
+   *   2. Optionally sets up a payment channel
+   *   3. Changes status to "running"
+   *   4. Calls the subclass's execute() method
+   *   5. Catches errors and transitions to "error" status
    */
   async start(): Promise<void> {
     if (this.status === "running") return;
     if (this.status === "stopped") {
       throw new Error("Cannot restart a stopped agent. Create a new one.");
+    }
+
+    // Check Fiber connectivity before starting
+    try {
+      this.fiberConnected = await this.fiberClient.isConnected();
+      if (this.fiberConnected) {
+        const nodeInfo = await this.channelManager.getNodeInfo();
+        this.nodePublicKey = nodeInfo.node_id;
+        console.log(`[Agent ${this.config.id}] Fiber connected — node: ${this.nodePublicKey?.slice(0, 16)}...`);
+      } else {
+        console.log(`[Agent ${this.config.id}] Fiber not available — running in simulation mode`);
+      }
+    } catch {
+      console.log(`[Agent ${this.config.id}] Fiber check failed — running in simulation mode`);
+      this.fiberConnected = false;
+    }
+
+    // Set up channel if peer is configured and Fiber is available
+    if (this.fiberConnected && this.config.peerId) {
+      try {
+        await this.setupChannel();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[Agent ${this.config.id}] Channel setup failed: ${msg} — continuing without channel`);
+      }
     }
 
     this.setStatus("running");
@@ -126,6 +153,36 @@ export abstract class BaseAgent extends EventEmitter {
         timestamp: now(),
       });
     }
+  }
+
+  /**
+   * Set up a Fiber payment channel with the configured peer.
+   *
+   * Flow:
+   *   1. Connect to peer via multiaddr
+   *   2. Open channel with configured funding amount
+   *   3. Wait for channel to reach CHANNEL_READY state
+   */
+  private async setupChannel(): Promise<void> {
+    if (!this.config.peerId) return;
+
+    console.log(`[Agent ${this.config.id}] Connecting to peer: ${this.config.peerId.slice(0, 30)}...`);
+    await this.channelManager.connectPeer(this.config.peerId);
+
+    console.log(`[Agent ${this.config.id}] Opening channel with ${this.config.channelFunding} shannons...`);
+    const fundingHex = "0x" + this.config.channelFunding.toString(16);
+    const result = await this.channelManager.openChannel(
+      this.config.peerId,
+      fundingHex,
+    );
+
+    console.log(`[Agent ${this.config.id}] Channel opening: ${result.temporary_channel_id}`);
+    const channel = await this.channelManager.waitForChannelReady(
+      result.temporary_channel_id,
+      120_000, // 2 min timeout for testnet
+    );
+    this.channelId = channel.channel_id;
+    console.log(`[Agent ${this.config.id}] Channel ready: ${this.channelId}`);
   }
 
   /** Pause the agent (can be resumed) */
