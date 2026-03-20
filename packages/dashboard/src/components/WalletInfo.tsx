@@ -22,39 +22,60 @@ export function WalletInfo() {
   }, []);
 
   return (
-    <div className="bg-ckb-card border border-ckb-border rounded-lg p-4">
-      <h2 className="text-sm font-medium text-white mb-3">Wallet</h2>
+    <div className="bg-white rounded-2xl shadow-card border border-surface-200/50 overflow-hidden">
+      <div className="px-5 py-4 border-b border-surface-100">
+        <h2 className="text-sm font-semibold text-surface-800">Wallet</h2>
+      </div>
 
-      {error ? (
-        <p className="text-xs text-red-400">{error}</p>
-      ) : !wallet ? (
-        <p className="text-xs text-ckb-muted">Loading...</p>
-      ) : (
-        <div className="space-y-2">
-          <div>
-            <p className="text-xs text-ckb-muted">Address</p>
-            <p className="text-xs font-mono text-white break-all">
-              {wallet.address as string}
-            </p>
+      <div className="p-5">
+        {error ? (
+          <p className="text-xs text-red-500">{error}</p>
+        ) : !wallet ? (
+          <div className="flex items-center gap-2 text-surface-400">
+            <div className="w-4 h-4 rounded-full border-2 border-surface-300 border-t-transparent animate-spin" />
+            <span className="text-xs">Loading...</span>
           </div>
-          <div>
-            <p className="text-xs text-ckb-muted">Balance</p>
-            <p className="text-lg font-mono font-semibold text-ckb-green">
-              {wallet.balanceFormatted as string}
-            </p>
+        ) : (
+          <div className="space-y-4">
+            {/* Balance - hero number */}
+            <div className="bg-gradient-to-br from-fiber-50 to-fiber-100/50 rounded-xl p-4 border border-fiber-200/40">
+              <p className="text-[10px] uppercase tracking-wider font-medium text-fiber-600/70 mb-1">
+                Balance
+              </p>
+              <p className="text-2xl font-bold font-mono text-fiber-700 tracking-tight tabular-nums">
+                {wallet.balanceFormatted as string}
+              </p>
+            </div>
+
+            {/* Address */}
+            <div>
+              <p className="text-[10px] uppercase tracking-wider font-medium text-surface-400 mb-1.5">
+                Address
+              </p>
+              <p className="text-[11px] font-mono text-surface-500 break-all leading-relaxed bg-surface-50 rounded-lg px-3 py-2 border border-surface-200/50">
+                {wallet.address as string}
+              </p>
+            </div>
+
+            {/* Connection status */}
+            <div className="flex items-center gap-2 pt-1">
+              <div className="relative">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    wallet.isReady ? "bg-fiber-500" : "bg-red-400"
+                  }`}
+                />
+                {wallet.isReady && (
+                  <div className="absolute inset-0 w-2 h-2 rounded-full bg-fiber-500 status-pulse" />
+                )}
+              </div>
+              <span className="text-xs font-medium text-surface-500">
+                {wallet.isReady ? "Connected to CKB Testnet" : "Not connected"}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div
-              className={`w-2 h-2 rounded-full ${
-                wallet.isReady ? "bg-ckb-green" : "bg-red-500"
-              }`}
-            />
-            <span className="text-xs text-ckb-muted">
-              {wallet.isReady ? "Connected" : "Not connected"}
-            </span>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
