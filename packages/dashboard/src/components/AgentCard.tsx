@@ -5,18 +5,18 @@ interface AgentCardProps {
   onRefresh: () => void;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  idle: "bg-gray-500",
-  running: "bg-ckb-green",
-  paused: "bg-yellow-500",
-  stopped: "bg-gray-600",
-  error: "bg-red-500",
+const STATUS_CONFIG: Record<string, { color: string; bg: string; dot: string; label: string }> = {
+  idle: { color: "text-surface-500", bg: "bg-surface-100", dot: "bg-surface-400", label: "Idle" },
+  running: { color: "text-fiber-700", bg: "bg-fiber-50", dot: "bg-fiber-500", label: "Running" },
+  paused: { color: "text-amber-700", bg: "bg-amber-50", dot: "bg-amber-400", label: "Paused" },
+  stopped: { color: "text-surface-500", bg: "bg-surface-100", dot: "bg-surface-400", label: "Stopped" },
+  error: { color: "text-red-700", bg: "bg-red-50", dot: "bg-red-400", label: "Error" },
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  dca: "DCA",
-  stream: "Stream",
-  commerce: "Commerce",
+const TYPE_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string }> = {
+  dca: { label: "DCA", icon: "\u21BB", color: "text-fiber-700", bg: "bg-fiber-50 border-fiber-200" },
+  stream: { label: "Stream", icon: "\u2192", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
+  commerce: { label: "Commerce", icon: "\u2194", color: "text-violet-700", bg: "bg-violet-50 border-violet-200" },
 };
 
 export function AgentCard({ agent, onRefresh }: AgentCardProps) {
@@ -24,6 +24,8 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   const status = agent.status as string;
   const id = config.id as string;
   const type = config.type as string;
+  const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
+  const typeCfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.dca;
 
   async function handleAction(action: "start" | "stop" | "pause" | "resume") {
     try {
@@ -48,83 +50,82 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   }
 
   return (
-    <div className="bg-ckb-card border border-ckb-border rounded-lg p-4">
+    <div className="bg-white rounded-2xl shadow-card card-interactive border border-surface-200/50 p-5 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 text-xs font-medium rounded bg-ckb-green/20 text-ckb-green">
-            {TYPE_LABELS[type] ?? type}
-          </span>
-          <h3 className="text-sm font-medium text-white">
-            {config.name as string}
-          </h3>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg ${typeCfg.bg}`}>
+            <span className={typeCfg.color}>{typeCfg.icon}</span>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-surface-800">
+              {config.name as string}
+            </h3>
+            <span className={`inline-flex items-center gap-1 text-xs font-medium ${typeCfg.color}`}>
+              {typeCfg.label} Agent
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[status] ?? "bg-gray-500"}`} />
-          <span className="text-xs text-ckb-muted capitalize">{status}</span>
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.color}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot} ${status === "running" ? "status-pulse" : ""}`} />
+          {statusCfg.label}
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-3">
-        <div>
-          <p className="text-xs text-ckb-muted">Spent</p>
-          <p className="text-sm font-mono text-white">
-            {formatShannons(agent.totalSpent as string)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-ckb-muted">Payments</p>
-          <p className="text-sm font-mono text-white">
-            {String(agent.paymentCount)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-ckb-muted">Channel</p>
-          <p className="text-sm font-mono text-white truncate">
-            {agent.channelId
-              ? truncate(agent.channelId as string)
-              : "—"}
-          </p>
-        </div>
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <StatCell
+          label="Spent"
+          value={formatShannons(agent.totalSpent as string)}
+          accent
+        />
+        <StatCell
+          label="Payments"
+          value={String(agent.paymentCount)}
+        />
+        <StatCell
+          label="Channel"
+          value={agent.channelId ? truncate(agent.channelId as string) : "\u2014"}
+          mono
+        />
       </div>
 
       {/* Error display */}
       {agent.error ? (
-        <div className="mb-3 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400">
+        <div className="mb-4 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 leading-relaxed">
           {String(agent.error)}
         </div>
       ) : null}
 
       {/* Actions */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 pt-1">
         {status === "idle" && (
-          <ActionButton onClick={() => handleAction("start")} color="green">
+          <ActionButton onClick={() => handleAction("start")} variant="primary">
             Start
           </ActionButton>
         )}
         {status === "running" && (
           <>
-            <ActionButton onClick={() => handleAction("pause")} color="yellow">
+            <ActionButton onClick={() => handleAction("pause")} variant="warning">
               Pause
             </ActionButton>
-            <ActionButton onClick={() => handleAction("stop")} color="red">
+            <ActionButton onClick={() => handleAction("stop")} variant="danger">
               Stop
             </ActionButton>
           </>
         )}
         {status === "paused" && (
           <>
-            <ActionButton onClick={() => handleAction("resume")} color="green">
+            <ActionButton onClick={() => handleAction("resume")} variant="primary">
               Resume
             </ActionButton>
-            <ActionButton onClick={() => handleAction("stop")} color="red">
+            <ActionButton onClick={() => handleAction("stop")} variant="danger">
               Stop
             </ActionButton>
           </>
         )}
         {(status === "stopped" || status === "error") && (
-          <ActionButton onClick={() => agentsApi.remove(id).then(onRefresh)} color="gray">
+          <ActionButton onClick={() => agentsApi.remove(id).then(onRefresh)} variant="ghost">
             Remove
           </ActionButton>
         )}
@@ -133,26 +134,57 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   );
 }
 
+function StatCell({
+  label,
+  value,
+  accent,
+  mono,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  mono?: boolean;
+}) {
+  return (
+    <div className="bg-surface-50 rounded-xl px-3 py-2.5">
+      <p className="text-[10px] uppercase tracking-wider font-medium text-surface-400 mb-0.5">
+        {label}
+      </p>
+      <p
+        className={`text-sm font-semibold truncate ${
+          accent ? "text-fiber-600" : "text-surface-800"
+        } ${mono ? "font-mono text-xs" : ""}`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function ActionButton({
   onClick,
-  color,
+  variant,
   children,
 }: {
   onClick: () => void;
-  color: "green" | "yellow" | "red" | "gray";
+  variant: "primary" | "warning" | "danger" | "ghost";
   children: React.ReactNode;
 }) {
-  const colors = {
-    green: "bg-ckb-green/20 text-ckb-green hover:bg-ckb-green/30",
-    yellow: "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30",
-    red: "bg-red-500/20 text-red-400 hover:bg-red-500/30",
-    gray: "bg-gray-500/20 text-gray-400 hover:bg-gray-500/30",
+  const styles = {
+    primary:
+      "bg-fiber-500 text-white hover:bg-fiber-600 shadow-sm shadow-fiber-500/20",
+    warning:
+      "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100",
+    danger:
+      "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100",
+    ghost:
+      "bg-surface-100 text-surface-500 hover:bg-surface-200 hover:text-surface-700",
   };
 
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${colors[color]}`}
+      className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 ${styles[variant]}`}
     >
       {children}
     </button>
