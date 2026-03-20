@@ -43,7 +43,7 @@ export function WalletInfo() {
                 Balance
               </p>
               <p className="text-2xl font-bold font-mono text-fiber-700 tracking-tight tabular-nums">
-                {wallet.balanceFormatted as string}
+                {String(wallet.balanceFormatted)}
               </p>
             </div>
 
@@ -53,7 +53,7 @@ export function WalletInfo() {
                 Address
               </p>
               <p className="text-[11px] font-mono text-surface-500 break-all leading-relaxed bg-surface-50 rounded-lg px-3 py-2 border border-surface-200/50">
-                {wallet.address as string}
+                {String(wallet.address)}
               </p>
             </div>
 
