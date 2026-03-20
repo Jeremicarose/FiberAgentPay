@@ -65,7 +65,7 @@ export function WalletInfo() {
                     wallet.isReady ? "bg-fiber-500" : "bg-red-400"
                   }`}
                 />
-                {wallet.isReady && (
+                {Boolean(wallet.isReady) && (
                   <div className="absolute inset-0 w-2 h-2 rounded-full bg-fiber-500 status-pulse" />
                 )}
               </div>
