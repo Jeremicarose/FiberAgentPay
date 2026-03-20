@@ -32,90 +32,121 @@ export function App() {
   }, [fetchAgents]);
 
   function handleRefresh() {
-    // Fetch fresh data immediately after create/stop/remove
     fetchAgents();
   }
 
+  const activeCount = agents.filter(
+    (a) => (a as Record<string, unknown>).status === "running"
+  ).length;
+  const paymentCount = events.filter(
+    (e) => (e as Record<string, unknown>).type === "payment:sent"
+  ).length;
+
   return (
     <Layout connected={connected}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column: Agents */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Agents</h2>
-            <span className="text-xs text-ckb-muted">
-              {agents.length} agent{agents.length !== 1 ? "s" : ""}
-            </span>
-          </div>
+      {/* Stats bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <StatCard label="Agents" value={String(agents.length)} icon={"\u2B22"} />
+        <StatCard
+          label="Active"
+          value={String(activeCount)}
+          icon={"\u25B6"}
+          accent={activeCount > 0}
+        />
+        <StatCard label="Events" value={String(events.length)} icon={"\u26A1"} />
+        <StatCard
+          label="Payments"
+          value={String(paymentCount)}
+          icon={"\u2191"}
+          accent={paymentCount > 0}
+        />
+      </div>
 
-          {agents.length === 0 ? (
-            <div className="bg-ckb-card border border-ckb-border rounded-lg p-8 text-center">
-              <p className="text-ckb-muted text-sm mb-2">No agents yet</p>
-              <p className="text-ckb-muted text-xs">
-                Create a DCA, Stream, or Commerce agent to get started.
-              </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left column: Agents + Feed */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Agents section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-surface-800">
+                Agents
+              </h2>
+              <span className="text-xs font-medium text-surface-400">
+                {agents.length} agent{agents.length !== 1 ? "s" : ""}
+              </span>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {agents.map((agent) => {
-                const a = agent as Record<string, unknown>;
-                const config = a.config as Record<string, unknown>;
-                return (
-                  <AgentCard
-                    key={config.id as string}
-                    agent={a}
-                    onRefresh={handleRefresh}
-                  />
-                );
-              })}
-            </div>
-          )}
+
+            {agents.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-card border border-surface-200/50 p-10 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-surface-100 flex items-center justify-center mx-auto mb-3">
+                  <span className="text-surface-400 text-xl">{"\u2B22"}</span>
+                </div>
+                <p className="text-sm font-medium text-surface-600 mb-1">
+                  No agents yet
+                </p>
+                <p className="text-xs text-surface-400">
+                  Create a DCA, Stream, or Commerce agent to get started.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {agents.map((agent) => {
+                  const a = agent as Record<string, unknown>;
+                  const config = a.config as Record<string, unknown>;
+                  return (
+                    <AgentCard
+                      key={config.id as string}
+                      agent={a}
+                      onRefresh={handleRefresh}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Payment Feed */}
           <PaymentFeed events={events} />
         </div>
 
         {/* Right column: Controls */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           <CreateAgent onCreated={handleRefresh} />
           <WalletInfo />
-
-          {/* Quick Stats */}
-          <div className="bg-ckb-card border border-ckb-border rounded-lg p-4">
-            <h2 className="text-sm font-medium text-white mb-3">Stats</h2>
-            <div className="space-y-2">
-              <StatRow
-                label="Active Agents"
-                value={String(
-                  agents.filter(
-                    (a) =>
-                      (a as Record<string, unknown>).status === "running",
-                  ).length,
-                )}
-              />
-              <StatRow label="Total Events" value={String(events.length)} />
-              <StatRow
-                label="Total Payments"
-                value={String(
-                  events.filter(
-                    (e) =>
-                      (e as Record<string, unknown>).type === "payment:sent",
-                  ).length,
-                )}
-              />
-            </div>
-          </div>
         </div>
       </div>
     </Layout>
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  accent?: boolean;
+}) {
   return (
-    <div className="flex justify-between items-center">
-      <span className="text-xs text-ckb-muted">{label}</span>
-      <span className="text-sm font-mono text-white">{value}</span>
+    <div className="bg-white rounded-2xl shadow-card border border-surface-200/50 px-5 py-4 animate-fade-in">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] uppercase tracking-wider font-medium text-surface-400">
+          {label}
+        </span>
+        <span className={`text-sm ${accent ? "text-fiber-500" : "text-surface-300"}`}>
+          {icon}
+        </span>
+      </div>
+      <p
+        className={`text-2xl font-bold tracking-tight tabular-nums ${
+          accent ? "text-fiber-600" : "text-surface-800"
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
