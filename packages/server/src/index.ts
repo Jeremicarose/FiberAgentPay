@@ -94,6 +94,7 @@ async function main() {
         status: event.payment.status,
         direction: event.payment.direction,
         timestamp: event.timestamp,
+        onChainTxHash: event.payment.onChainTxHash,
       });
     }
   });

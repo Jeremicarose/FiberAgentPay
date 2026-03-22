@@ -28,6 +28,8 @@ export interface PaymentRecord {
   direction: string;
   timestamp: number;
   description?: string;
+  /** Real CKB on-chain transaction hash */
+  onChainTxHash?: string;
 }
 
 const paymentHistory: PaymentRecord[] = [];
