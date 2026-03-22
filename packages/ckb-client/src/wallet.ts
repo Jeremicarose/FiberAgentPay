@@ -112,11 +112,6 @@ export class Wallet {
   /**
    * Build and send a CKB transfer transaction.
    *
-   * This is used for:
-   *   - Funding Fiber channels (sending CKB to the channel funding address)
-   *   - Withdrawing funds after channel close
-   *   - Any on-chain CKB movement
-   *
    * CCC's transaction building flow:
    *   1. Create tx with desired outputs (who gets what)
    *   2. completeInputsByCapacity — CCC finds cells to spend
@@ -148,6 +143,65 @@ export class Wallet {
     await tx.completeFeeBy(this.signer, 1000);
 
     // Sign with our private key and broadcast to the network
+    const txHash = await this.signer.sendTransaction(tx);
+    return txHash;
+  }
+
+  /**
+   * Write a payment record on-chain as a CKB Cell.
+   *
+   * This creates a new cell with:
+   *   - Lock script: our wallet's lock (we own the cell)
+   *   - Data: serialized payment record (agent ID, amount, timestamp, description)
+   *
+   * This demonstrates the CKB Cell model:
+   *   - Cells hold both value (capacity) and data (outputs_data)
+   *   - The capacity field must cover the cell's total byte size
+   *   - Minimum cell: 61 CKB (lock script overhead) + data bytes
+   *
+   * The cell's data is a simple JSON string encoded as hex.
+   * A production system would use Molecule serialization, but
+   * JSON keeps it readable for hackathon demos.
+   *
+   * @param record - Payment data to store on-chain
+   * @returns Transaction hash
+   */
+  async writePaymentRecord(record: {
+    agentId: string;
+    amount: bigint;
+    timestamp: number;
+    description: string;
+  }): Promise<string> {
+    // Serialize the record as JSON bytes
+    const data = JSON.stringify({
+      type: "fiber-agent-payment",
+      agentId: record.agentId,
+      amount: record.amount.toString(),
+      timestamp: record.timestamp,
+      description: record.description,
+    });
+    const dataBytes = new TextEncoder().encode(data);
+    const dataHex = "0x" + Array.from(dataBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+
+    // Get our lock script for the output cell
+    const addresses = await this.signer.getAddresses();
+    const { script: ourLock } = await ccc.Address.fromString(addresses[0], this.client);
+
+    // Calculate capacity: cell overhead (61 CKB) + data size
+    // Each byte of data costs 1 CKB (1e8 shannons)
+    const dataCapacity = BigInt(dataBytes.length) * 100_000_000n;
+    const cellCapacity = 6_100_000_000n + dataCapacity; // 61 CKB base + data
+
+    const tx = ccc.Transaction.from({
+      outputs: [{ lock: ourLock }],
+      outputsData: [dataHex],
+    });
+
+    tx.outputs[0].capacity = ccc.fixedPointFrom(cellCapacity);
+
+    await tx.completeInputsByCapacity(this.signer);
+    await tx.completeFeeBy(this.signer, 1000);
+
     const txHash = await this.signer.sendTransaction(tx);
     return txHash;
   }
