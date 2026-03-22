@@ -115,3 +115,4 @@ export const WS_PORT = Number(process.env.WS_PORT ?? 3002);
 
 /** CKB Testnet faucet for automated funding */
 export const TESTNET_FAUCET_URL = "https://faucet.nervos.org";
+

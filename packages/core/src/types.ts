@@ -173,6 +173,8 @@ export interface FiberPayment {
   timestamp: number;
   /** Optional description / memo */
   description?: string;
+  /** On-chain CKB transaction hash (when payment is recorded on-chain) */
+  onChainTxHash?: string;
 }
 
 /**
