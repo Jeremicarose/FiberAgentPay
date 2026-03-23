@@ -1,3 +1,5 @@
+const EXPLORER_BASE = "https://pudge.explorer.nervos.org/transaction/";
+
 interface PaymentFeedProps {
   events: unknown[];
 }
@@ -133,44 +135,74 @@ export function PaymentFeed({ events }: PaymentFeedProps) {
             const agentId = ((e.agentId as string) ?? "").slice(0, 8);
 
             let detail = "";
+            let onChainTxHash: string | undefined;
             if (type === "payment:sent" || type === "payment:received") {
               const payment = e.payment as Record<string, unknown>;
               detail = formatShannons(payment?.amount as string);
+              onChainTxHash = payment?.onChainTxHash as string | undefined;
             } else if (type === "agent:error") {
               detail = (e.error as string) ?? "";
             } else if (type === "safety:limit_reached") {
-              detail = e.limitType as string;
+              detail = String(e.limitType);
             }
 
             return (
               <div
                 key={i}
-                className="feed-item flex items-center gap-3 px-5 py-3 hover:bg-surface-50/50 transition-colors"
+                className="feed-item px-5 py-3 hover:bg-surface-50/50 transition-colors"
               >
-                <span className="font-mono text-[11px] text-surface-300 w-[68px] shrink-0 tabular-nums">
-                  {timestamp}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-[11px] text-surface-300 w-[68px] shrink-0 tabular-nums">
+                    {timestamp}
+                  </span>
 
-                <div
-                  className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold ${cfg.bg} ${cfg.color}`}
-                >
-                  {cfg.icon}
+                  <div
+                    className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold ${cfg.bg} ${cfg.color}`}
+                  >
+                    {cfg.icon}
+                  </div>
+
+                  <span className="font-mono text-[11px] text-surface-300 w-[60px] shrink-0">
+                    {agentId}
+                  </span>
+
+                  <span className="text-xs font-medium text-surface-700 truncate">
+                    {cfg.label}
+                  </span>
+
+                  {detail && (
+                    <span
+                      className={`ml-auto text-xs font-semibold font-mono tabular-nums shrink-0 ${
+                        type.startsWith("payment:")
+                          ? "text-fiber-600"
+                          : "text-surface-400"
+                      }`}
+                    >
+                      {detail}
+                    </span>
+                  )}
                 </div>
 
-                <span className="font-mono text-[11px] text-surface-300 w-[60px] shrink-0">
-                  {agentId}
-                </span>
-
-                <span className="text-xs font-medium text-surface-700 truncate">
-                  {cfg.label}
-                </span>
-
-                {detail && (
-                  <span className={`ml-auto text-xs font-semibold font-mono tabular-nums shrink-0 ${
-                    type.startsWith("payment:") ? "text-fiber-600" : "text-surface-400"
-                  }`}>
-                    {detail}
-                  </span>
+                {/* On-chain tx link */}
+                {onChainTxHash && (
+                  <div className="mt-1.5 ml-[134px]">
+                    <a
+                      href={`${EXPLORER_BASE}${onChainTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[10px] font-mono text-fiber-500 hover:text-fiber-700 transition-colors group"
+                    >
+                      <span className="w-3.5 h-3.5 rounded bg-fiber-50 flex items-center justify-center text-[8px] group-hover:bg-fiber-100">
+                        {"\u26D3"}
+                      </span>
+                      <span>
+                        {onChainTxHash.slice(0, 10)}...{onChainTxHash.slice(-8)}
+                      </span>
+                      <span className="text-fiber-300 group-hover:text-fiber-500">
+                        {"\u2197"}
+                      </span>
+                    </a>
+                  </div>
                 )}
               </div>
             );
