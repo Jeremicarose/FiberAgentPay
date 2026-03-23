@@ -202,9 +202,28 @@ export abstract class BaseAgent extends EventEmitter {
     this.emitEvent({ type: "agent:started", agentId: this.config.id, timestamp: now() });
   }
 
-  /** Stop the agent permanently and close any open channel */
+  /** Stop the agent permanently, write summary to chain, close channel */
   async stop(): Promise<void> {
     this.abortController.abort();
+
+    // Write a summary payment record on-chain as a Cell.
+    // This creates one cell with all agent activity — demonstrates
+    // the CKB Cell model (cells hold value + data) without burning
+    // capacity on every individual payment.
+    if (this.onChainTxHashes.length > 0) {
+      try {
+        const summaryTxHash = await this.wallet.writePaymentRecord({
+          agentId: this.config.id,
+          amount: this.totalSpent,
+          timestamp: now(),
+          description: `Agent summary: ${this.paymentCount} payments, ${this.onChainTxHashes.length} on-chain txs`,
+        });
+        console.log(`[Agent ${this.config.id}] Summary cell written: ${summaryTxHash}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[Agent ${this.config.id}] Summary write failed: ${msg}`);
+      }
+    }
 
     // Close Fiber channel if one is open
     if (this.fiberConnected && this.channelId) {
@@ -212,7 +231,7 @@ export abstract class BaseAgent extends EventEmitter {
         const lockScript = {
           code_hash: "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
           hash_type: "type" as const,
-          args: "0x" + "0".repeat(40), // Will be overridden by actual wallet lock
+          args: "0x" + "0".repeat(40),
         };
         await this.channelManager.shutdownChannel(this.channelId, lockScript);
         console.log(`[Agent ${this.config.id}] Channel ${this.channelId} closing...`);
