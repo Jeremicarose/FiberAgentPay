@@ -1,6 +1,6 @@
 # FiberAgentPay
 
-AI agents that autonomously execute micropayment strategies via [Fiber Network](https://fiber.world) payment channels on [CKB](https://nervos.org).
+AI agents that autonomously execute micropayment strategies with **real on-chain CKB transactions** via [Fiber Network](https://fiber.world) payment channels on [CKB](https://nervos.org).
 
 Built for the **Claw & Order: CKB AI Agent Hackathon**.
 
@@ -8,15 +8,23 @@ Built for the **Claw & Order: CKB AI Agent Hackathon**.
 
 ## What It Does
 
-FiberAgentPay lets you create autonomous AI agents that manage micropayments through Fiber Network — a Lightning Network-style Layer 2 on CKB. Three agent types are available:
+FiberAgentPay lets you create autonomous AI agents that manage micropayments through Fiber Network — a Lightning Network-style Layer 2 on CKB. Every payment produces a **real, verifiable CKB testnet transaction** that can be viewed on the [CKB Explorer](https://pudge.explorer.nervos.org/).
 
 | Agent | Strategy | Example |
 |-------|----------|---------|
-| **DCA** | Periodic fixed-amount purchases | Buy 1 CKB every 10 seconds, 100 times |
-| **Stream** | Continuous pay-per-second micropayments | Stream 0.01 CKB/second for API access |
-| **Commerce** | Agent-to-agent marketplace | Agents buy/sell data feeds for micropayments |
+| **DCA** | Periodic fixed-amount purchases | Buy 61 CKB every 10 seconds, 5 times |
+| **Stream** | Continuous pay-per-second micropayments | Stream micropayments for API access (on-chain every 30s) |
+| **Commerce** | Agent-to-agent marketplace | Agents buy/sell data feeds with real CKB payments |
 
-Each agent has built-in safety limits (per-transaction, per-hour, lifetime caps), can be paused/resumed from the dashboard, and logs every payment in real time.
+### How CKB Is Used
+
+- **Cell Model**: Every agent payment creates a real CKB cell (UTXO). Cells hold both capacity (value) and data.
+- **On-Chain Payment Records**: When an agent stops, it writes a summary cell to CKB containing a JSON record of all activity in the cell's `outputs_data` field.
+- **Lock Scripts**: All transactions use `secp256k1_blake160_sighash_all` for signature-verified ownership.
+- **CCC SDK**: Transactions are built with `@ckb-ccc/core` — `Transaction.from()` → `completeInputsByCapacity()` → `completeFeeBy()` → `sendTransaction()`.
+- **Fiber Network**: L2 payment channel invoices for off-chain micropayments between channel peers.
+
+Each agent has built-in safety limits (per-transaction, per-hour, lifetime caps), can be paused/resumed from the dashboard, and logs every payment in real time with clickable explorer links.
 
 ---
 
@@ -26,7 +34,7 @@ Each agent has built-in safety limits (per-transaction, per-hour, lifetime caps)
 - **pnpm** 9 or later (`npm install -g pnpm`)
 - **CKB testnet private key** (instructions below)
 
-Optional (for real Fiber payments):
+Optional (for Fiber L2 payments):
 - **Fiber node** binary ([setup script included](#running-with-a-fiber-node))
 
 ---
@@ -68,12 +76,13 @@ node -e "console.log('0x' + require('crypto').randomBytes(32).toString('hex'))"
 Get testnet CKB from the faucet. First, find your address:
 
 ```bash
+pnpm build
 pnpm --filter @fiber-agent-pay/server dev
 # Look for: Wallet: ckt1q...
 # Copy that address
 ```
 
-Then visit **https://faucet.nervos.org/** and request funds for your address (100,000 CKB).
+Then visit **https://faucet.nervos.org/** and request funds for your address (100,000 CKB recommended).
 
 ### 4. Build and start
 
@@ -81,33 +90,72 @@ Then visit **https://faucet.nervos.org/** and request funds for your address (10
 # Build all packages
 pnpm build
 
-# Start the server + dashboard
-pnpm dev
+# Start the server
+node packages/server/dist/index.js
+
+# In another terminal, start the dashboard
+pnpm --filter @fiber-agent-pay/dashboard dev
 ```
 
 ### 5. Open the dashboard
 
-Go to **http://localhost:5173** (or the port shown in terminal).
+Go to **http://localhost:5173**.
 
-You'll see:
+- **Home page** (`/`) — Landing page with project overview, features, and how-it-works
+- **Dashboard** (`/dashboard`) — Full agent management interface
+
+The dashboard shows:
 - **Create Agent** panel — pick DCA, Stream, or Commerce
-- **Agent cards** — show status, payments, and controls (Start/Pause/Stop)
-- **Live Feed** — real-time stream of all agent events and payments
+- **Agent cards** — status, payments, and controls (Start/Pause/Stop)
+- **Live Feed** — real-time events with clickable CKB explorer links for on-chain transactions
 - **Wallet** — your CKB address and balance
 - **Stats** — active agents, total events, total payments
 
 ### 6. Create your first agent
 
-1. Click **DCA** in the Create Agent panel
-2. Click **Create DCA Agent**
-3. Click **Start** on the new agent card
-4. Watch the Live Feed — you'll see payment events every 10 seconds
+1. Go to `/dashboard`
+2. Click **DCA** in the Create Agent panel
+3. Click **Create DCA Agent**
+4. Click **Start** on the new agent card
+5. Watch the Live Feed — you'll see payment events with real CKB transaction hashes
+6. Click a transaction link to verify it on the CKB Explorer
+
+---
+
+## On-Chain Verification
+
+Every agent payment creates a real CKB transaction. You can verify them:
+
+**In the dashboard**: Each payment in the Live Feed shows a clickable link like `0x64407e85...b5139a13 ↗` that opens the transaction on [CKB Testnet Explorer](https://pudge.explorer.nervos.org/).
+
+**Via the API**:
+```bash
+# List all on-chain transactions
+curl http://localhost:3001/payments/onchain
+```
+
+**On-chain payment record cells**: When an agent stops, it writes a summary cell containing JSON data:
+```json
+{
+  "type": "fiber-agent-payment",
+  "agentId": "abc123",
+  "amount": "183000000",
+  "timestamp": 1774266360930,
+  "description": "Agent summary: 3 payments, 3 on-chain txs"
+}
+```
+
+This data is stored in CKB's `outputs_data` field — demonstrating the Cell model's ability to hold arbitrary data alongside value.
+
+### Minimum Cell Capacity
+
+CKB requires a minimum of 61 CKB per cell. For micropayment agents (Stream, Commerce) where individual payments are smaller than 61 CKB, the system transfers the minimum cell size on-chain while tracking the actual micropayment amount in the agent's ledger. An on-chain cooldown of 30 seconds prevents rapid-fire agents from overwhelming L1.
 
 ---
 
 ## Running with a Fiber Node
 
-Without a Fiber node, agents run in **simulation mode** — they track payments locally but don't create real on-chain invoices. With a Fiber node running, agents create real Fiber testnet invoices for each payment.
+Without a Fiber node, agents create **real CKB L1 transactions** for every payment. With a Fiber node, agents also create Fiber L2 invoices for off-chain payment proofs.
 
 ### Setup
 
@@ -145,14 +193,6 @@ Fiber node: connected at http://127.0.0.1:8227
 
 And `GET /health` returns `"fiber": true`.
 
-When agents run, the logs will show real Fiber invoices:
-
-```
-[Agent abc123] Fiber connected — node: 02e0da7a...
-[Agent abc123] Invoice created: fibt1000000001pcs...
-[DCA Agent abc123] Purchase 1/10: 1.00 CKB — Total: 1.00 CKB
-```
-
 ---
 
 ## Project Structure
@@ -162,7 +202,7 @@ FiberAgentPay/
 ├── packages/
 │   ├── core/           # Shared types, config, utilities
 │   ├── fiber-client/   # Fiber Network JSON-RPC client
-│   ├── ckb-client/     # CKB SDK wrapper (wallet, transactions)
+│   ├── ckb-client/     # CKB SDK wrapper (wallet, transfers, payment records)
 │   ├── agents/         # Agent implementations (DCA, Stream, Commerce)
 │   ├── server/         # Hono HTTP + WebSocket server
 │   └── dashboard/      # React + Tailwind real-time dashboard
@@ -179,7 +219,8 @@ FiberAgentPay/
 ┌─────────────────────────────────────────────┐
 │              Dashboard (React)               │
 │     http://localhost:5173                    │
-│  Agent cards, Live Feed, Wallet, Stats      │
+│  Home page + Dashboard with agent mgmt      │
+│  Explorer links for on-chain tx hashes      │
 └──────┬──────────────────┬───────────────────┘
        │ REST API          │ WebSocket
        ▼                   ▼
@@ -206,10 +247,11 @@ FiberAgentPay/
 │  Fiber   │          │  CKB Testnet │
 │  Node    │          │  (on-chain)  │
 │ :8227    │          │              │
-│ Invoices │          │  Wallet      │
-│ Channels │          │  Balance     │
-│ Payments │          │  Funding     │
-└──────────┘          └──────────────┘
+│ Invoices │          │  Transfers   │
+│ Channels │          │  Payment     │
+│ L2 Pmts  │          │  Records     │
+└──────────┘          │  (Cell data) │
+                      └──────────────┘
 ```
 
 ---
@@ -229,6 +271,8 @@ FiberAgentPay/
 | `DELETE` | `/agents/:id` | Remove a stopped agent |
 | `GET` | `/channels` | List Fiber channels |
 | `GET` | `/payments` | Payment history |
+| `GET` | `/payments/onchain` | Payments with real CKB tx hashes |
+| `GET` | `/payments/:hash` | Payment status by hash |
 | `GET` | `/wallet` | Wallet info and balance |
 
 ---
@@ -251,12 +295,12 @@ When a limit is hit, the agent **auto-pauses** and emits a `safety:limit_reached
 
 | Layer | Technology |
 |-------|-----------|
-| Blockchain | CKB Testnet (Nervos) |
+| Blockchain | CKB Testnet (Nervos) — Cell model, UTXO-style |
 | L2 Payments | Fiber Network (Lightning-style channels) |
-| CKB SDK | @ckb-ccc/core |
+| CKB SDK | @ckb-ccc/core (transaction building, signing) |
 | Backend | Hono (TypeScript HTTP framework) |
 | Real-time | WebSocket (ws library) |
-| Frontend | React + Vite + Tailwind CSS |
+| Frontend | React + Vite + Tailwind CSS + react-router-dom |
 | Language | TypeScript throughout |
 
 ---
