@@ -65,6 +65,9 @@ export abstract class BaseAgent extends EventEmitter {
   protected wallet: Wallet;
   protected safety: SafetyGuard;
 
+  // Collect on-chain tx hashes for the summary record
+  protected onChainTxHashes: string[] = [];
+
   // Abort controller for graceful shutdown
   protected abortController: AbortController;
 
