@@ -30,6 +30,8 @@ export interface PaymentRecord {
   description?: string;
   /** Real CKB on-chain transaction hash */
   onChainTxHash?: string;
+  /** Recipient CKB address (for inter-agent payments) */
+  recipientAddress?: string;
 }
 
 const paymentHistory: PaymentRecord[] = [];

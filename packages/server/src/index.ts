@@ -95,6 +95,7 @@ async function main() {
         direction: event.payment.direction,
         timestamp: event.timestamp,
         onChainTxHash: event.payment.onChainTxHash,
+        recipientAddress: event.payment.recipientAddress,
       });
     }
   });
