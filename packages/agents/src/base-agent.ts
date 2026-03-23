@@ -277,46 +277,26 @@ export abstract class BaseAgent extends EventEmitter {
     let paymentStatus: "completed" | "pending";
     let onChainTxHash: string | undefined;
 
-    // === Step 1: Real CKB on-chain transfer ===
-    // Send CKB to our own address (self-transfer) to create a real on-chain tx.
-    // In production, this would go to a counterparty. For hackathon demo,
-    // self-transfer proves we can build, sign, and submit CKB transactions.
+    // === Real CKB on-chain transfer ===
+    // Send CKB to our own address (self-transfer) to create a verifiable
+    // on-chain transaction. In production this goes to a counterparty.
+    // The tx hash is proof of payment on the CKB testnet explorer.
     try {
       const walletAddress = this.wallet.address;
       const txHash = await this.wallet.transfer(walletAddress, amount);
       onChainTxHash = txHash;
       paymentHash = txHash;
       paymentStatus = "completed";
-      console.log(`[Agent ${this.config.id}] On-chain CKB tx: ${txHash}`);
+      this.onChainTxHashes.push(txHash);
+      console.log(`[Agent ${this.config.id}] CKB tx: ${txHash}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.warn(`[Agent ${this.config.id}] CKB transfer failed: ${msg}`);
-      // Fall back to Fiber invoice or simulation
       paymentHash = "";
       paymentStatus = "pending";
     }
 
-    // === Step 2: Write payment record on-chain as Cell data ===
-    // Creates a cell whose data contains the payment details.
-    // This demonstrates the CKB Cell model: cells hold value + data.
-    if (onChainTxHash) {
-      try {
-        const recordTxHash = await this.wallet.writePaymentRecord({
-          agentId: this.config.id,
-          amount,
-          timestamp: now(),
-          description,
-        });
-        console.log(`[Agent ${this.config.id}] Payment record cell: ${recordTxHash}`);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[Agent ${this.config.id}] Record write failed: ${msg} — payment still valid`);
-      }
-    }
-
-    // === Step 3: Fiber invoice (if connected) ===
-    // Create a real Fiber Network invoice as L2 proof, even if the payment
-    // was settled on-chain. This shows both L1 and L2 integration.
+    // === Fiber invoice fallback (if CKB transfer failed) ===
     if (this.fiberConnected && !paymentHash) {
       try {
         const amountHex = "0x" + amount.toString(16);
@@ -324,16 +304,13 @@ export abstract class BaseAgent extends EventEmitter {
           description,
           currency: "Fibt",
         });
-        console.log(`[Agent ${this.config.id}] Fiber invoice: ${invoice.invoice_address.slice(0, 30)}...`);
         paymentHash = invoice.invoice.data.payment_hash;
         paymentStatus = "pending";
       } catch {
-        // Fiber unavailable — use simulation hash
         paymentHash = "sim_" + generateId().replace(/-/g, "");
         paymentStatus = "completed";
       }
     } else if (!paymentHash) {
-      // No CKB tx and no Fiber — simulation fallback
       paymentHash = "sim_" + generateId().replace(/-/g, "");
       paymentStatus = "completed";
     }
