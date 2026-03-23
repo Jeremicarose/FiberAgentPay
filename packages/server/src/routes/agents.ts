@@ -107,6 +107,7 @@ export function createAgentRoutes(scheduler: AgentScheduler): Hono {
           desiredServices: body.desiredServices ?? [],
           maxPricePerRequest: BigInt(body.maxPricePerRequest ?? "1000000"),
           useAINegotiation: body.useAINegotiation ?? false,
+          reinvestPercent: body.reinvestPercent ?? 80,
         } satisfies CommerceAgentConfig;
         break;
 
@@ -114,7 +115,7 @@ export function createAgentRoutes(scheduler: AgentScheduler): Hono {
         return c.json({ success: false, error: `Unknown agent type: ${body.type}` }, 400);
     }
 
-    const agent = scheduler.createAgent(config);
+    const agent = await scheduler.createAgent(config);
     const state = agent.getState();
 
     return c.text(jsonStringify({ success: true, data: state, timestamp: Date.now() }), 201, {
