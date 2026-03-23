@@ -27,6 +27,16 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
   const typeCfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.dca;
 
+  const address = (agent.address as string) || "";
+  const earnings = agent.earnings as string | undefined;
+  const balance = agent.balance as string | undefined;
+  const spent = agent.totalSpent as string | undefined;
+
+  // Calculate net profit/loss
+  const earningsNum = parseShannons(earnings);
+  const spentNum = parseShannons(spent);
+  const net = earningsNum - spentNum;
+
   async function handleAction(action: "start" | "stop" | "pause" | "resume") {
     try {
       switch (action) {
@@ -52,7 +62,7 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   return (
     <div className="bg-white rounded-2xl shadow-card card-interactive border border-surface-200/50 p-5 animate-fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg ${typeCfg.bg}`}>
             <span className={typeCfg.color}>{typeCfg.icon}</span>
@@ -72,22 +82,48 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      {/* Agent address */}
+      {address && (
+        <div className="mb-3 px-3 py-1.5 bg-surface-50 rounded-lg">
+          <p className="text-[10px] uppercase tracking-wider font-medium text-surface-400 mb-0.5">Wallet</p>
+          <p className="text-[11px] font-mono text-surface-500 truncate">{address}</p>
+        </div>
+      )}
+
+      {/* Economy stats */}
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <StatCell
+          label="Earned"
+          value={formatShannons(earnings)}
+          color="text-fiber-600"
+        />
         <StatCell
           label="Spent"
-          value={formatShannons(agent.totalSpent as string)}
-          accent
+          value={formatShannons(spent)}
+          color="text-blue-600"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <StatCell
+          label="Balance"
+          value={formatShannons(balance)}
+          color="text-surface-800"
         />
         <StatCell
-          label="Payments"
-          value={String(agent.paymentCount)}
+          label="Net P&L"
+          value={`${net >= 0 ? "+" : ""}${(net / 1e8).toFixed(2)} CKB`}
+          color={net >= 0 ? "text-fiber-600" : "text-red-500"}
         />
-        <StatCell
-          label="Channel"
-          value={agent.channelId ? truncate(agent.channelId as string) : "\u2014"}
-          mono
-        />
+      </div>
+
+      {/* Payment count */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <span className="text-[10px] uppercase tracking-wider font-medium text-surface-400">
+          Payments
+        </span>
+        <span className="text-xs font-semibold text-surface-700 tabular-nums">
+          {String(agent.paymentCount)}
+        </span>
       </div>
 
       {/* Error display */}
@@ -137,24 +173,18 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
 function StatCell({
   label,
   value,
-  accent,
-  mono,
+  color,
 }: {
   label: string;
   value: string;
-  accent?: boolean;
-  mono?: boolean;
+  color?: string;
 }) {
   return (
-    <div className="bg-surface-50 rounded-xl px-3 py-2.5">
+    <div className="bg-surface-50 rounded-xl px-3 py-2">
       <p className="text-[10px] uppercase tracking-wider font-medium text-surface-400 mb-0.5">
         {label}
       </p>
-      <p
-        className={`text-sm font-semibold truncate ${
-          accent ? "text-fiber-600" : "text-surface-800"
-        } ${mono ? "font-mono text-xs" : ""}`}
-      >
+      <p className={`text-sm font-semibold truncate tabular-nums ${color ?? "text-surface-800"}`}>
         {value}
       </p>
     </div>
@@ -198,7 +228,7 @@ function formatShannons(value: string | undefined): string {
   return `${num.toFixed(2)} CKB`;
 }
 
-function truncate(hex: string, chars = 4): string {
-  if (hex.length <= chars * 2 + 4) return hex;
-  return `${hex.slice(0, chars + 2)}...${hex.slice(-chars)}`;
+function parseShannons(value: string | undefined): number {
+  if (!value || value === "0" || value === "0n") return 0;
+  return Number(value.replace(/n$/, ""));
 }
