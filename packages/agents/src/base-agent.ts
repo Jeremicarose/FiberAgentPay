@@ -302,34 +302,40 @@ export abstract class BaseAgent extends EventEmitter {
     let onChainTxHash: string | undefined;
 
     // Minimum CKB cell capacity: 61 CKB (6,100,000,000 shannons).
-    // On-chain transfers must create cells >= this size.
-    // For smaller amounts (micropayments), we accumulate and transfer
-    // when the batch reaches the minimum. This mirrors how Fiber L2
-    // batches micropayments and settles on L1 periodically.
     const MIN_CELL = 6_100_000_000n;
     const transferAmount = amount >= MIN_CELL ? amount : MIN_CELL;
 
-    // === Real CKB on-chain transfer ===
-    // Creates a verifiable transaction on CKB testnet.
-    // For micropayments below 61 CKB, we transfer the minimum cell size
-    // to prove on-chain capability while the actual accounting tracks
-    // the real micropayment amount.
-    try {
-      const walletAddress = this.wallet.address;
-      const txHash = await this.wallet.transfer(walletAddress, transferAmount);
-      onChainTxHash = txHash;
-      paymentHash = txHash;
-      paymentStatus = "completed";
-      this.onChainTxHashes.push(txHash);
-      console.log(`[Agent ${this.config.id}] CKB tx: ${txHash} (${amount} shannons)`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[Agent ${this.config.id}] CKB transfer failed: ${msg}`);
+    // Cooldown check: avoid hammering CKB L1 with rapid transactions.
+    // Stream agents tick every 1s — we only do on-chain tx once per 30s.
+    // Between on-chain txs, payments are still tracked in memory and
+    // a summary cell is written when the agent stops.
+    const timeSinceLastTx = now() - this.lastOnChainTxAt;
+    const canDoOnChain = timeSinceLastTx >= BaseAgent.ON_CHAIN_COOLDOWN_MS;
+
+    if (canDoOnChain) {
+      // === Real CKB on-chain transfer ===
+      try {
+        const walletAddress = this.wallet.address;
+        const txHash = await this.wallet.transfer(walletAddress, transferAmount);
+        onChainTxHash = txHash;
+        paymentHash = txHash;
+        paymentStatus = "completed";
+        this.onChainTxHashes.push(txHash);
+        this.lastOnChainTxAt = now();
+        console.log(`[Agent ${this.config.id}] CKB tx: ${txHash} (${amount} shannons)`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[Agent ${this.config.id}] CKB transfer failed: ${msg}`);
+        paymentHash = "";
+        paymentStatus = "pending";
+      }
+    } else {
+      // Off-chain tracking — no L1 tx this tick
       paymentHash = "";
       paymentStatus = "pending";
     }
 
-    // === Fiber invoice fallback (if CKB transfer failed) ===
+    // === Fiber invoice fallback (if no on-chain tx) ===
     if (this.fiberConnected && !paymentHash) {
       try {
         const amountHex = "0x" + amount.toString(16);
