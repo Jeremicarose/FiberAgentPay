@@ -183,6 +183,8 @@ export interface FiberPayment {
   description?: string;
   /** On-chain CKB transaction hash (when payment is recorded on-chain) */
   onChainTxHash?: string;
+  /** Recipient's CKB address (for inter-agent payments) */
+  recipientAddress?: string;
 }
 
 /**
