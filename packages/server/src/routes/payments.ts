@@ -93,6 +93,27 @@ export function createPaymentRoutes(fiberClient: FiberClient): Hono {
     }
   });
 
+  /** GET /payments/onchain — List payments with real CKB tx hashes */
+  app.get("/onchain", (c) => {
+    const onchain = paymentHistory
+      .filter((p) => p.onChainTxHash)
+      .sort((a, b) => b.timestamp - a.timestamp);
+
+    return c.text(
+      jsonStringify({
+        success: true,
+        data: {
+          transactions: onchain,
+          total: onchain.length,
+          explorerBaseUrl: "https://pudge.explorer.nervos.org/transaction/",
+        },
+        timestamp: Date.now(),
+      }),
+      200,
+      { "Content-Type": "application/json" },
+    );
+  });
+
   /** GET /payments/:hash — Check payment status */
   app.get("/:hash", async (c) => {
     try {
