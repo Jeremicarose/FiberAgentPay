@@ -94,6 +94,8 @@ export interface CommerceAgentConfig extends BaseAgentConfig {
   maxPricePerRequest: bigint;
   /** Whether to use Claude AI for intelligent negotiation */
   useAINegotiation: boolean;
+  /** Percentage of earnings to reinvest in purchases (0-100). 0 = never buy, 100 = spend all earnings */
+  reinvestPercent: number;
 }
 
 /** Union of all agent config types for type-safe dispatch */
