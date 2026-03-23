@@ -2,22 +2,17 @@
 // Agent Scheduler
 // ============================================================
 // Manages the lifecycle of all agent instances in the system.
-// Think of it as the "process manager" for agents — like PM2
-// manages Node processes, the scheduler manages agents.
 //
-// Responsibilities:
-//   - Create agents from config (factory pattern)
-//   - Track all running/paused/stopped agents
-//   - Forward events from agents to the server layer
-//   - Provide a unified API for the REST endpoints
+// Each agent gets its own wallet (unique private key + CKB address).
+// The main wallet funds agent wallets on startup. Agents then
+// transact with each other using real on-chain CKB transfers.
 //
-// Why a central scheduler instead of standalone agents?
-// The server needs a single place to query "all agents" and
-// their states. Without a scheduler, each route handler would
-// need to manage its own agent references.
+// This creates a genuine agent economy:
+//   earn → spend → reinvest → repeat
 // ============================================================
 
 import { EventEmitter } from "node:events";
+import { randomBytes } from "node:crypto";
 import {
   type AgentConfig,
   type AgentEvent,
@@ -33,41 +28,44 @@ import { DCAAgent } from "./dca-agent.js";
 import { StreamAgent } from "./stream-agent.js";
 import { CommerceAgent } from "./commerce-agent.js";
 
+/** Amount to fund each agent wallet on start (500 CKB) */
+const AGENT_FUNDING_AMOUNT = 50_000_000_000n;
+
 export class AgentScheduler extends EventEmitter {
   private agents: Map<string, BaseAgent> = new Map();
+  private agentWallets: Map<string, Wallet> = new Map();
   private fiberClient: FiberClient;
-  private wallet: Wallet;
+  private mainWallet: Wallet;
 
   /**
    * @param fiberClient - Shared Fiber connection for all agents
-   * @param wallet - Shared wallet for all agents
-   *
-   * Why shared connections?
-   * All agents use the same Fiber node and wallet. Creating
-   * separate connections per agent would waste resources and
-   * make it harder to track total spending across agents.
+   * @param mainWallet - The funded main wallet used to seed agent wallets
    */
-  constructor(fiberClient: FiberClient, wallet: Wallet) {
+  constructor(fiberClient: FiberClient, mainWallet: Wallet) {
     super();
     this.fiberClient = fiberClient;
-    this.wallet = wallet;
+    this.mainWallet = mainWallet;
   }
 
   /**
-   * Create and register a new agent from config.
+   * Create and register a new agent with its own wallet.
    *
-   * Uses a factory pattern — the config's `type` field determines
-   * which agent class to instantiate. TypeScript's discriminated
-   * union on AgentConfig means each branch gets the correct
-   * config type automatically.
-   *
-   * @param config - Agent configuration (DCA, Stream, or Commerce)
-   * @returns The created agent instance
+   * Each agent gets a unique private key and CKB address.
+   * This enables real inter-agent payments where CKB flows
+   * between different addresses on-chain.
    */
-  createAgent(config: AgentConfig): BaseAgent {
+  async createAgent(config: AgentConfig): Promise<BaseAgent> {
     if (this.agents.has(config.id)) {
       throw new Error(`Agent with ID ${config.id} already exists`);
     }
+
+    // Generate a unique wallet for this agent
+    const agentPrivateKey = "0x" + randomBytes(32).toString("hex");
+    const agentWallet = new Wallet(agentPrivateKey);
+    await agentWallet.init();
+    this.agentWallets.set(config.id, agentWallet);
+
+    console.log(`[Scheduler] Agent ${config.id.slice(0, 8)} wallet: ${agentWallet.address}`);
 
     let agent: BaseAgent;
 
@@ -76,21 +74,21 @@ export class AgentScheduler extends EventEmitter {
         agent = new DCAAgent(
           config as DCAAgentConfig,
           this.fiberClient,
-          this.wallet,
+          agentWallet,
         );
         break;
       case "stream":
         agent = new StreamAgent(
           config as StreamAgentConfig,
           this.fiberClient,
-          this.wallet,
+          agentWallet,
         );
         break;
       case "commerce":
         agent = new CommerceAgent(
           config as CommerceAgentConfig,
           this.fiberClient,
-          this.wallet,
+          agentWallet,
         );
         break;
       default:
@@ -98,23 +96,47 @@ export class AgentScheduler extends EventEmitter {
     }
 
     // Forward agent events to the scheduler's listeners
-    // The server subscribes to scheduler events and pushes
-    // them to WebSocket clients (the dashboard)
     agent.on("event", (event: AgentEvent) => {
       this.emit("agentEvent", event);
     });
 
-    agent.on("stateChange", (state: AgentState) => {
-      this.emit("agentStateChange", state);
+    agent.on("stateChange", (_state: AgentState) => {
+      this.emit("agentStateChange", _state);
     });
 
     this.agents.set(config.id, agent);
 
     // Emit a state change so WebSocket sends a fresh snapshot
-    // to all connected dashboards immediately
     this.emit("agentStateChange", agent.getState());
 
     return agent;
+  }
+
+  /**
+   * Fund an agent's wallet from the main wallet.
+   *
+   * Transfers CKB from the main wallet to the agent's unique address.
+   * This creates a real on-chain transaction — the agent then has
+   * its own funds to spend in the economy.
+   */
+  async fundAgent(id: string): Promise<string | null> {
+    const agentWallet = this.agentWallets.get(id);
+    if (!agentWallet) throw new Error(`No wallet for agent ${id}`);
+
+    try {
+      const txHash = await this.mainWallet.transfer(
+        agentWallet.address,
+        AGENT_FUNDING_AMOUNT,
+      );
+      console.log(
+        `[Scheduler] Funded agent ${id.slice(0, 8)} with 500 CKB → tx: ${txHash}`,
+      );
+      return txHash;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[Scheduler] Failed to fund agent ${id.slice(0, 8)}: ${msg}`);
+      return null;
+    }
   }
 
   /** Get an agent by ID */
@@ -127,9 +149,29 @@ export class AgentScheduler extends EventEmitter {
     return Array.from(this.agents.values()).map((a) => a.getState());
   }
 
-  /** Start an agent by ID */
+  /**
+   * Start an agent: fund its wallet, then begin execution.
+   *
+   * The funding transaction needs time to confirm (~10s on testnet).
+   * We fire-and-forget the funding — the agent starts immediately
+   * and its first on-chain payment will wait for the funding to land.
+   */
   async startAgent(id: string): Promise<void> {
     const agent = this.getAgentOrThrow(id);
+
+    // Fund the agent's wallet from main wallet (fire-and-forget)
+    // The CKB tx takes ~10s to confirm. The agent starts immediately
+    // but its first on-chain transfer will use the funded cells.
+    this.fundAgent(id).then(async () => {
+      // Refresh the agent's balance after funding lands
+      // Wait a bit for the tx to propagate
+      await new Promise((r) => setTimeout(r, 15_000));
+      await agent.refreshBalance();
+      this.emit("agentStateChange", agent.getState());
+    }).catch(() => {
+      // Funding failed — agent runs but may not have on-chain funds
+    });
+
     await agent.start();
   }
 
@@ -161,7 +203,7 @@ export class AgentScheduler extends EventEmitter {
       }
       agent.removeAllListeners();
       this.agents.delete(id);
-      // Notify dashboards that an agent was removed
+      this.agentWallets.delete(id);
       this.emit("agentStateChange", null);
     }
   }
