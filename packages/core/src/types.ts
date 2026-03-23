@@ -108,8 +108,14 @@ export interface AgentState {
   status: AgentStatus;
   /** Channel ID if one is open */
   channelId?: string;
+  /** Agent's unique CKB wallet address */
+  address: string;
   /** Total amount spent so far (in shannons) */
   totalSpent: bigint;
+  /** Total amount earned from selling services (in shannons) */
+  earnings: bigint;
+  /** Current wallet balance (in shannons, cached) */
+  balance: bigint;
   /** Number of payments executed */
   paymentCount: number;
   /** Timestamp of last payment */
