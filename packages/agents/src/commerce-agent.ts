@@ -1,29 +1,29 @@
 // ============================================================
-// Agent-to-Agent Commerce Agent
+// Agent-to-Agent Commerce Agent — The Economic Actor
 // ============================================================
-// This agent participates in a marketplace where agents trade
-// services for micropayments. It can both:
-//   - SELL: Register services and fulfill requests from buyers
-//   - BUY: Discover services, evaluate them, and purchase
+// This is the core of the agent economy. Each Commerce agent:
+//   - SELLS services and earns real CKB
+//   - BUYS services from other agents with real CKB transfers
+//   - REINVESTS a percentage of earnings (DCA-style budgeting)
+//   - Makes decisions based on budget constraints (not blind spending)
 //
-// This is the most complex agent and the most novel for the
-// hackathon — demonstrating autonomous economic agents that
-// negotiate and transact without human intervention.
+// The full economic loop:
+//   earn → spend → reinvest → repeat
 //
-// Architecture:
-//   Agent A (seller): registers "Weather Data Feed" for 1000 shannons
-//   Agent B (buyer): discovers the service, evaluates price,
-//                    pays via Fiber, receives the data
+// Three behaviors embedded in one agent:
+//   Commerce: discovers WHAT to buy
+//   Stream:   HOW to pay (chunked payments for large purchases)
+//   DCA:      HOW to sustain (reinvestPercent allocates earnings)
 //
-// The optional Claude AI integration makes the buyer agent
-// intelligent — it can evaluate service descriptions, compare
-// prices, and decide whether a purchase is worthwhile.
+// Each payment creates a real CKB transaction between different
+// wallet addresses — verifiable on the CKB testnet explorer.
 // ============================================================
 
 import {
   type CommerceAgentConfig,
   type ServiceListing,
   type ServiceRequest,
+  type FiberPayment,
   now,
   sleep,
   generateId,
@@ -34,16 +34,11 @@ import { BaseAgent } from "./base-agent.js";
 import type { SafetyLimits } from "./safety.js";
 
 /**
- * In-memory service registry.
+ * In-memory service registry — the marketplace.
  *
- * In a production system, this would be a decentralized registry
- * (perhaps stored on-chain or in a DHT). For the hackathon,
- * a shared in-memory registry demonstrates the concept.
- *
- * Why static/shared?
- * All commerce agents in the same process need to see each
- * other's services. A static registry simulates a network-wide
- * service directory.
+ * All commerce agents share this registry to discover each other's
+ * services. It now includes provider wallet addresses so buyers
+ * know where to send CKB.
  */
 export class ServiceRegistry {
   private static services: Map<string, ServiceListing> = new Map();
@@ -86,7 +81,6 @@ export class ServiceRegistry {
     }
   }
 
-  /** Reset registry (useful for testing) */
   static clear(): void {
     this.services.clear();
     this.requests.clear();
@@ -95,6 +89,9 @@ export class ServiceRegistry {
 
 export class CommerceAgent extends BaseAgent {
   declare config: CommerceAgentConfig;
+
+  // Friction: skip buying occasionally to prevent hot-potato loops
+  private cycleCount: number = 0;
 
   constructor(
     config: CommerceAgentConfig,
@@ -106,34 +103,39 @@ export class CommerceAgent extends BaseAgent {
   }
 
   /**
-   * Commerce agent execution loop.
+   * Commerce agent execution loop — the economic actor.
    *
-   * Unlike DCA/Stream which have a simple timer loop, the
-   * commerce agent alternates between two roles:
-   *   1. Provider: Check for incoming requests and fulfill them
-   *   2. Consumer: Discover services and make purchases
+   * Each cycle:
+   *   1. Provider: check for paid requests and fulfill them (earn)
+   *   2. Consumer: discover services and buy if budget allows (spend)
+   *   3. Wait 5 seconds, repeat
    *
-   * This dual-role design means a single agent can both earn
-   * and spend — creating a self-sustaining agent economy.
+   * Budget check prevents blind spending:
+   *   availableBudget = initialFunds + (earnings * reinvestPercent / 100) - totalSpent
+   *   Only buy if budget covers the price.
    */
   protected async execute(): Promise<void> {
+    const reinvest = this.config.reinvestPercent ?? 80;
     console.log(
-      `[Commerce Agent ${this.config.id}] Starting — ` +
-      `Offering ${this.config.offeredServices.length} services, ` +
-      `Looking for: ${this.config.desiredServices.join(", ")}`,
+      `[Commerce ${this.config.id.slice(0, 8)}] Starting — ` +
+      `Selling ${this.config.offeredServices.length} services, ` +
+      `Buying: ${this.config.desiredServices.join(", ") || "nothing"}, ` +
+      `Reinvest: ${reinvest}%`,
     );
 
-    // Register our services in the marketplace
+    // Register our services with our wallet address
     for (const service of this.config.offeredServices) {
-      ServiceRegistry.registerService({
+      const listing: ServiceListing = {
         ...service,
         providerId: this.config.id,
+        providerAddress: this.wallet.address,
         isActive: true,
-      });
+      };
+      ServiceRegistry.registerService(listing);
       this.emitEvent({
         type: "commerce:service_listed",
         agentId: this.config.id,
-        service: { ...service, providerId: this.config.id, isActive: true },
+        service: listing,
         timestamp: now(),
       });
     }
@@ -145,11 +147,26 @@ export class CommerceAgent extends BaseAgent {
         if (this.abortController.signal.aborted) return;
       }
 
-      // --- Provider role: fulfill incoming requests ---
+      this.cycleCount++;
+
+      // --- Provider role: fulfill requests and EARN ---
       await this.handleIncomingRequests();
 
-      // --- Consumer role: discover and purchase services ---
-      await this.discoverAndPurchase();
+      // --- Consumer role: discover, evaluate, and BUY ---
+      // Add friction: skip buying on some cycles (30% chance to "think")
+      // This prevents agents from blindly passing CKB back and forth
+      if (Math.random() > 0.3) {
+        await this.discoverAndPurchase();
+      } else if (this.cycleCount % 5 === 0) {
+        console.log(
+          `[Commerce ${this.config.id.slice(0, 8)}] Cycle ${this.cycleCount}: evaluating market (skipping purchase)`,
+        );
+      }
+
+      // Refresh balance periodically (every 3 cycles)
+      if (this.cycleCount % 3 === 0) {
+        await this.refreshBalance();
+      }
 
       // Poll every 5 seconds
       const shouldProceed = await this.waitInterval(5000);
@@ -162,22 +179,23 @@ export class CommerceAgent extends BaseAgent {
     }
 
     console.log(
-      `[Commerce Agent ${this.config.id}] Shutdown — ` +
-      `${this.paymentCount} transactions completed`,
+      `[Commerce ${this.config.id.slice(0, 8)}] Shutdown — ` +
+      `Earned: ${this.earnings} shannons, Spent: ${this.totalSpent} shannons, ` +
+      `Net: ${this.earnings - this.totalSpent} shannons`,
     );
   }
 
   /**
-   * Handle requests from other agents for our services.
+   * Handle requests from other agents — EARN CKB.
    *
-   * When another agent pays for our service, we:
-   *   1. Find the pending request
-   *   2. Generate the result (data, computation, etc.)
-   *   3. Mark the request as fulfilled
+   * When another agent pays for our service:
+   *   1. Find pending (paid) requests
+   *   2. Fulfill the service (generate result)
+   *   3. Record earnings
+   *   4. Emit payment:received event
    *
-   * In production, the "generate result" step would call real
-   * APIs, run computations, or query data feeds. For the hackathon
-   * demo, we simulate the service fulfillment.
+   * The CKB has already been transferred to our wallet address
+   * by the buyer's safePayment(). We just fulfill and record.
    */
   private async handleIncomingRequests(): Promise<void> {
     const requests = ServiceRegistry.getRequestsForProvider(this.config.id);
@@ -187,13 +205,32 @@ export class CommerceAgent extends BaseAgent {
       if (!service) continue;
 
       try {
-        // Simulate service fulfillment
         const result = await this.fulfillService(service, request);
+
+        // Record the earning
+        this.addEarnings(service.pricePerRequest);
 
         ServiceRegistry.updateRequest(request.requestId, {
           status: "fulfilled",
           result,
           fulfilledAt: now(),
+        });
+
+        // Emit payment:received — the earning event
+        this.emitEvent({
+          type: "payment:received",
+          agentId: this.config.id,
+          payment: {
+            id: generateId(),
+            agentId: this.config.id,
+            channelId: "",
+            amount: service.pricePerRequest,
+            paymentHash: request.paymentHash ?? "",
+            status: "completed",
+            direction: "inbound",
+            timestamp: now(),
+          },
+          timestamp: now(),
         });
 
         this.emitEvent({
@@ -209,13 +246,14 @@ export class CommerceAgent extends BaseAgent {
         });
 
         console.log(
-          `[Commerce Agent ${this.config.id}] Fulfilled request ` +
-          `${request.requestId} for service "${service.name}"`,
+          `[Commerce ${this.config.id.slice(0, 8)}] EARNED ${service.pricePerRequest} shannons ` +
+          `from ${request.requesterId.slice(0, 8)} for "${service.name}" ` +
+          `(total earned: ${this.earnings})`,
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(
-          `[Commerce Agent ${this.config.id}] Failed to fulfill request: ${message}`,
+          `[Commerce ${this.config.id.slice(0, 8)}] Failed to fulfill: ${message}`,
         );
         ServiceRegistry.updateRequest(request.requestId, { status: "failed" });
       }
@@ -223,44 +261,56 @@ export class CommerceAgent extends BaseAgent {
   }
 
   /**
-   * Discover services offered by other agents and purchase them.
+   * Discover services and purchase — SPEND CKB.
    *
-   * The agent looks for services matching its desiredServices list,
-   * evaluates the price, and pays via Fiber if it's within budget.
+   * Budget-aware purchasing:
+   *   1. Calculate available budget from earnings * reinvestPercent
+   *   2. Find affordable services from other agents
+   *   3. Pay to the seller's wallet address (real CKB transfer)
+   *   4. Submit service request
    *
-   * With AI negotiation enabled, the agent uses Claude to evaluate
-   * whether a service is worth its price — a primitive form of
-   * autonomous economic reasoning.
+   * This is where DCA behavior is embedded:
+   *   reinvestPercent controls how much of earnings go to purchases.
+   *   100% = aggressive reinvestment
+   *   50% = save half
+   *   0% = pure seller, never buys
    */
   private async discoverAndPurchase(): Promise<void> {
+    const reinvest = this.config.reinvestPercent ?? 80;
+
+    // Budget = portion of earnings allocated to spending
+    // Plus initial wallet balance (for bootstrapping before first sale)
+    const earningsBudget = (this.earnings * BigInt(reinvest)) / 100n;
+    const availableBudget = earningsBudget + this.cachedBalance - this.totalSpent;
+
     for (const desiredCategory of this.config.desiredServices) {
       const available = ServiceRegistry.findServices(desiredCategory);
 
-      // Filter out our own services and find affordable ones
+      // Filter: not our own services, affordable, within budget
       const candidates = available.filter(
         (s) =>
           s.providerId !== this.config.id &&
-          s.pricePerRequest <= this.config.maxPricePerRequest,
+          s.pricePerRequest <= this.config.maxPricePerRequest &&
+          s.pricePerRequest <= availableBudget,
       );
 
       if (candidates.length === 0) continue;
 
-      // Select the best candidate
-      // Simple strategy: cheapest service. With AI enabled,
-      // we'd evaluate description quality, provider reputation, etc.
+      // Select based on price — cheapest first (economic rationality)
       const selected = candidates.sort((a, b) =>
         Number(a.pricePerRequest - b.pricePerRequest),
       )[0];
 
-      // Attempt to purchase
       try {
+        // Pay to the seller's wallet address — real CKB transfer
         const payment = await this.safePayment(
           `Purchase "${selected.name}" from ${selected.providerId.slice(0, 8)}`,
           selected.pricePerRequest,
+          selected.providerAddress,
         );
 
         if (payment) {
-          // Create a service request
+          // Create a service request so the seller knows to fulfill
           const request: ServiceRequest = {
             requestId: generateId(),
             serviceId: selected.serviceId,
@@ -274,15 +324,15 @@ export class CommerceAgent extends BaseAgent {
           ServiceRegistry.submitRequest(request);
 
           console.log(
-            `[Commerce Agent ${this.config.id}] Purchased "${selected.name}" ` +
-            `from agent ${selected.providerId} for ${selected.pricePerRequest} shannons`,
+            `[Commerce ${this.config.id.slice(0, 8)}] SPENT ${selected.pricePerRequest} shannons ` +
+            `→ ${selected.providerId.slice(0, 8)} for "${selected.name}" ` +
+            `(budget remaining: ${availableBudget - selected.pricePerRequest})`,
           );
         }
       } catch (err) {
-        // Purchase failed — not critical, will retry next cycle
         const message = err instanceof Error ? err.message : String(err);
         console.error(
-          `[Commerce Agent ${this.config.id}] Purchase failed: ${message}`,
+          `[Commerce ${this.config.id.slice(0, 8)}] Purchase failed: ${message}`,
         );
       }
     }
@@ -291,13 +341,11 @@ export class CommerceAgent extends BaseAgent {
   /**
    * Simulate fulfilling a service request.
    *
-   * In a real system, this would:
-   *   - data_feed: Return real-time data from an API
-   *   - computation: Run analysis and return results
-   *   - oracle: Fetch and verify external data
-   *   - storage: Store/retrieve data
-   *
-   * For the hackathon demo, we return simulated results.
+   * In production, this would call real APIs or run computations.
+   * Prices vary by service category to create economic differentiation:
+   *   data_feed: cheaper (raw data)
+   *   computation: expensive (analysis work)
+   *   oracle: mid-range (verification)
    */
   private async fulfillService(
     service: ServiceListing,
@@ -311,7 +359,7 @@ export class CommerceAgent extends BaseAgent {
           data: {
             timestamp: now(),
             value: Math.random() * 1000,
-            source: `agent-${this.config.id}`,
+            source: `agent-${this.config.id.slice(0, 8)}`,
           },
         });
 
@@ -321,7 +369,7 @@ export class CommerceAgent extends BaseAgent {
           service: service.name,
           result: {
             timestamp: now(),
-            output: `Computed result from agent ${this.config.id}`,
+            output: `Analysis from agent ${this.config.id.slice(0, 8)}`,
             processingTimeMs: Math.floor(Math.random() * 500),
           },
         });
