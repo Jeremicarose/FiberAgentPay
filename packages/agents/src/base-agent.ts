@@ -52,6 +52,8 @@ export abstract class BaseAgent extends EventEmitter {
   protected status: AgentStatus = "idle";
   protected channelId?: string;
   protected totalSpent: bigint = 0n;
+  protected earnings: bigint = 0n;
+  protected cachedBalance: bigint = 0n;
   protected paymentCount: number = 0;
   protected lastPaymentAt?: number;
   protected error?: string;
@@ -69,7 +71,6 @@ export abstract class BaseAgent extends EventEmitter {
   protected onChainTxHashes: string[] = [];
 
   // On-chain cooldown: avoid hammering CKB with rapid txs
-  // Stream agents tick every 1s — we limit on-chain to once per 30s
   private lastOnChainTxAt: number = 0;
   private static readonly ON_CHAIN_COOLDOWN_MS = 30_000;
 
@@ -283,6 +284,7 @@ export abstract class BaseAgent extends EventEmitter {
   protected async safePayment(
     description: string,
     amount: bigint,
+    recipientAddress?: string,
   ): Promise<FiberPayment | null> {
     const check = this.safety.check(amount);
 
@@ -312,17 +314,20 @@ export abstract class BaseAgent extends EventEmitter {
     const timeSinceLastTx = now() - this.lastOnChainTxAt;
     const canDoOnChain = timeSinceLastTx >= BaseAgent.ON_CHAIN_COOLDOWN_MS;
 
+    // Destination: recipient's address if provided, otherwise self
+    const destination = recipientAddress ?? this.wallet.address;
+
     if (canDoOnChain) {
       // === Real CKB on-chain transfer ===
       try {
-        const walletAddress = this.wallet.address;
-        const txHash = await this.wallet.transfer(walletAddress, transferAmount);
+        const txHash = await this.wallet.transfer(destination, transferAmount);
         onChainTxHash = txHash;
         paymentHash = txHash;
         paymentStatus = "completed";
         this.onChainTxHashes.push(txHash);
         this.lastOnChainTxAt = now();
-        console.log(`[Agent ${this.config.id}] CKB tx: ${txHash} (${amount} shannons)`);
+        const target = recipientAddress ? recipientAddress.slice(0, 20) + "..." : "self";
+        console.log(`[Agent ${this.config.id}] CKB tx: ${txHash} → ${target} (${amount} shannons)`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn(`[Agent ${this.config.id}] CKB transfer failed: ${msg}`);
