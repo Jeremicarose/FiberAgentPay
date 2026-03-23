@@ -220,6 +220,8 @@ export interface ServiceListing {
   category: ServiceCategory;
   /** Agent ID that offers this service */
   providerId: string;
+  /** Provider's CKB wallet address — where payments are routed */
+  providerAddress: string;
   /** Whether the service is currently available */
   isActive: boolean;
 }
