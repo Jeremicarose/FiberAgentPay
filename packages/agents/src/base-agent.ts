@@ -68,6 +68,11 @@ export abstract class BaseAgent extends EventEmitter {
   // Collect on-chain tx hashes for the summary record
   protected onChainTxHashes: string[] = [];
 
+  // On-chain cooldown: avoid hammering CKB with rapid txs
+  // Stream agents tick every 1s — we limit on-chain to once per 30s
+  private lastOnChainTxAt: number = 0;
+  private static readonly ON_CHAIN_COOLDOWN_MS = 30_000;
+
   // Abort controller for graceful shutdown
   protected abortController: AbortController;
 
