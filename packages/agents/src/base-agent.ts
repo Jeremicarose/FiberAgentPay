@@ -388,13 +388,31 @@ export abstract class BaseAgent extends EventEmitter {
     return payment;
   }
 
+  /** Record earnings from selling services */
+  addEarnings(amount: bigint): void {
+    this.earnings += amount;
+    this.updatedAt = now();
+  }
+
+  /** Refresh cached balance from chain */
+  async refreshBalance(): Promise<void> {
+    try {
+      this.cachedBalance = await this.wallet.getBalance();
+    } catch {
+      // Balance query failed — keep cached value
+    }
+  }
+
   /** Get the current state snapshot for API/dashboard */
   getState(): AgentState {
     return {
       config: this.config,
       status: this.status,
       channelId: this.channelId,
+      address: this.wallet.isReady ? this.wallet.address : "",
       totalSpent: this.totalSpent,
+      earnings: this.earnings,
+      balance: this.cachedBalance,
       paymentCount: this.paymentCount,
       lastPaymentAt: this.lastPaymentAt,
       error: this.error,
