@@ -375,6 +375,7 @@ export abstract class BaseAgent extends EventEmitter {
       direction: "outbound",
       timestamp: now(),
       onChainTxHash,
+      recipientAddress: recipientAddress ?? this.wallet.address,
     };
 
     this.emitEvent({
