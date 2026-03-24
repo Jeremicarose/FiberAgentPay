@@ -5,6 +5,7 @@ import { AgentCard } from "../components/AgentCard";
 import { PaymentFeed } from "../components/PaymentFeed";
 import { WalletInfo } from "../components/WalletInfo";
 import { CreateAgent } from "../components/CreateAgent";
+import { EconomyGraph } from "../components/EconomyGraph";
 import { agentsApi } from "../lib/api";
 
 export function DashboardPage() {
@@ -59,6 +60,13 @@ export function DashboardPage() {
             accent={paymentCount > 0}
           />
         </div>
+
+        {/* Economy visualization — shows live payment flows between agents */}
+        {agents.length >= 2 && (
+          <div className="mb-6">
+            <EconomyGraph agents={agents} events={events} />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column: Agents + Feed */}
