@@ -1,127 +1,155 @@
+import { useState } from "react";
+
 const EXPLORER_BASE = "https://pudge.explorer.nervos.org/transaction/";
 
 interface PaymentFeedProps {
   events: unknown[];
 }
 
+type FilterKey = "all" | "payments" | "commerce" | "system";
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "payments", label: "Payments" },
+  { key: "commerce", label: "Commerce" },
+  { key: "system", label: "System" },
+];
+
+function getFilterKey(type: string): FilterKey {
+  if (type.startsWith("payment:")) return "payments";
+  if (type.startsWith("commerce:")) return "commerce";
+  return "system";
+}
+
 const EVENT_CONFIG: Record<
   string,
   { icon: string; color: string; bg: string; label: string }
 > = {
-  "agent:started": {
-    icon: "\u25B6",
-    color: "text-fiber-600",
-    bg: "bg-fiber-50",
-    label: "Agent started",
-  },
-  "agent:stopped": {
-    icon: "\u25A0",
-    color: "text-surface-500",
-    bg: "bg-surface-100",
-    label: "Agent stopped",
-  },
-  "agent:paused": {
-    icon: "\u275A\u275A",
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    label: "Agent paused",
-  },
-  "agent:error": {
-    icon: "!",
-    color: "text-red-600",
-    bg: "bg-red-50",
-    label: "Error",
-  },
-  "channel:opened": {
-    icon: "+",
-    color: "text-fiber-600",
-    bg: "bg-fiber-50",
-    label: "Channel opened",
-  },
-  "channel:closed": {
-    icon: "\u2013",
-    color: "text-surface-500",
-    bg: "bg-surface-100",
-    label: "Channel closed",
-  },
-  "payment:sent": {
-    icon: "\u2191",
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-    label: "Payment sent",
-  },
-  "payment:received": {
-    icon: "\u2193",
-    color: "text-fiber-600",
-    bg: "bg-fiber-50",
-    label: "Payment received",
-  },
-  "safety:warning": {
-    icon: "\u26A0",
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    label: "Safety warning",
-  },
-  "safety:limit_reached": {
-    icon: "\u2716",
-    color: "text-red-600",
-    bg: "bg-red-50",
-    label: "Limit reached",
-  },
-  "commerce:service_listed": {
-    icon: "\u2605",
-    color: "text-violet-600",
-    bg: "bg-violet-50",
-    label: "Service listed",
-  },
-  "commerce:request_fulfilled": {
-    icon: "\u2713",
-    color: "text-fiber-600",
-    bg: "bg-fiber-50",
-    label: "Request fulfilled",
-  },
+  "agent:started": { icon: "\u25B6", color: "text-fiber-600", bg: "bg-fiber-50", label: "Started" },
+  "agent:stopped": { icon: "\u25A0", color: "text-surface-500", bg: "bg-surface-100", label: "Stopped" },
+  "agent:paused": { icon: "\u275A\u275A", color: "text-amber-600", bg: "bg-amber-50", label: "Paused" },
+  "agent:error": { icon: "!", color: "text-red-600", bg: "bg-red-50", label: "Error" },
+  "channel:opened": { icon: "+", color: "text-fiber-600", bg: "bg-fiber-50", label: "Channel opened" },
+  "channel:closed": { icon: "\u2013", color: "text-surface-500", bg: "bg-surface-100", label: "Channel closed" },
+  "payment:sent": { icon: "\u2191", color: "text-blue-600", bg: "bg-blue-50", label: "Sent" },
+  "payment:received": { icon: "\u2193", color: "text-fiber-600", bg: "bg-fiber-50", label: "Received" },
+  "safety:warning": { icon: "\u26A0", color: "text-amber-600", bg: "bg-amber-50", label: "Warning" },
+  "safety:limit_reached": { icon: "\u2716", color: "text-red-600", bg: "bg-red-50", label: "Limit hit" },
+  "commerce:service_listed": { icon: "\u2605", color: "text-violet-600", bg: "bg-violet-50", label: "Listed" },
+  "commerce:request_fulfilled": { icon: "\u2713", color: "text-fiber-600", bg: "bg-fiber-50", label: "Fulfilled" },
 };
 
 export function PaymentFeed({ events }: PaymentFeedProps) {
+  const [filter, setFilter] = useState<FilterKey>("all");
+
+  const filtered = filter === "all"
+    ? events
+    : events.filter((e) => getFilterKey((e as Record<string, unknown>).type as string) === filter);
+
+  // Limit display to 50 most recent
+  const displayed = filtered.slice(0, 50);
+
+  // Collect on-chain tx hashes
+  const onChainTxs: { hash: string; agentId: string; amount: string; timestamp: number }[] = [];
+  for (const raw of events) {
+    const e = raw as Record<string, unknown>;
+    if (e.type !== "payment:sent" && e.type !== "payment:received") continue;
+    const payment = e.payment as Record<string, unknown> | undefined;
+    const hash = payment?.onChainTxHash as string | undefined;
+    if (hash && !onChainTxs.some((t) => t.hash === hash)) {
+      onChainTxs.push({
+        hash,
+        agentId: ((e.agentId as string) ?? "").slice(0, 8),
+        amount: formatShannons(payment?.amount as string),
+        timestamp: e.timestamp as number,
+      });
+    }
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-card border border-surface-200/50 overflow-hidden">
-      <div className="px-5 py-4 border-b border-surface-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-surface-800">Live Feed</h2>
+      {/* Header with filters */}
+      <div className="px-5 py-3 border-b border-surface-100">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-surface-800">Live Feed</h2>
+            {events.length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-fiber-50 text-fiber-600 tabular-nums">
+                {events.length}
+              </span>
+            )}
+          </div>
           {events.length > 0 && (
-            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-fiber-50 text-fiber-600 tabular-nums">
-              {events.length}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-fiber-500 status-pulse" />
+              <span className="text-[10px] uppercase tracking-wider font-medium text-surface-400">Live</span>
+            </div>
           )}
         </div>
         {events.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-fiber-500 status-pulse" />
-            <span className="text-[10px] uppercase tracking-wider font-medium text-surface-400">
-              Streaming
-            </span>
+          <div className="flex gap-1">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${
+                  filter === f.key
+                    ? "bg-surface-800 text-white"
+                    : "text-surface-400 hover:text-surface-600 hover:bg-surface-100"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {events.length === 0 ? (
-        <div className="px-5 py-12 text-center">
-          <div className="w-10 h-10 rounded-xl bg-surface-100 flex items-center justify-center mx-auto mb-3">
-            <span className="text-surface-400 text-sm">{"\u26A1"}</span>
+      {/* On-chain transactions banner */}
+      {onChainTxs.length > 0 && (
+        <div className="px-5 py-2.5 bg-fiber-50/50 border-b border-fiber-100/50">
+          <p className="text-[10px] uppercase tracking-wider font-medium text-fiber-700 mb-1.5">
+            On-Chain Transactions ({onChainTxs.length})
+          </p>
+          <div className="space-y-1">
+            {onChainTxs.slice(0, 5).map((tx) => (
+              <a
+                key={tx.hash}
+                href={`${EXPLORER_BASE}${tx.hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-2 group"
+              >
+                <span className="font-mono text-[11px] text-fiber-600 group-hover:text-fiber-800 transition-colors">
+                  {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
+                </span>
+                <span className="text-[10px] font-semibold text-fiber-500 tabular-nums">
+                  {tx.amount} {"\u2197"}
+                </span>
+              </a>
+            ))}
           </div>
-          <p className="text-sm text-surface-400">No events yet</p>
+        </div>
+      )}
+
+      {/* Event list */}
+      {displayed.length === 0 ? (
+        <div className="px-5 py-10 text-center">
+          <p className="text-sm text-surface-400">
+            {events.length === 0 ? "No events yet" : "No matching events"}
+          </p>
           <p className="text-xs text-surface-300 mt-1">
-            Create and start an agent to see activity here.
+            {events.length === 0
+              ? "Create and start agents to see activity."
+              : "Try a different filter."}
           </p>
         </div>
       ) : (
-        <div className="max-h-[420px] overflow-y-auto divide-y divide-surface-100/60">
-          {events.map((event, i) => {
+        <div className="max-h-[320px] overflow-y-auto divide-y divide-surface-100/60">
+          {displayed.map((event, i) => {
             const e = event as Record<string, unknown>;
             const type = e.type as string;
-            const timestamp = new Date(
-              e.timestamp as number
-            ).toLocaleTimeString([], {
+            const timestamp = new Date(e.timestamp as number).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
               second: "2-digit",
@@ -142,71 +170,51 @@ export function PaymentFeed({ events }: PaymentFeedProps) {
               onChainTxHash = payment?.onChainTxHash as string | undefined;
             } else if (type === "agent:error") {
               detail = (e.error as string) ?? "";
-            } else if (type === "safety:limit_reached") {
-              detail = String(e.limitType);
             }
 
             return (
-              <div
-                key={i}
-                className="feed-item px-5 py-3 hover:bg-surface-50/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-[11px] text-surface-300 w-[68px] shrink-0 tabular-nums">
+              <div key={i} className="feed-item px-4 py-2 hover:bg-surface-50/50 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] text-surface-300 w-[60px] shrink-0 tabular-nums">
                     {timestamp}
                   </span>
-
-                  <div
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold ${cfg.bg} ${cfg.color}`}
-                  >
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold ${cfg.bg} ${cfg.color}`}>
                     {cfg.icon}
                   </div>
-
-                  <span className="font-mono text-[11px] text-surface-300 w-[60px] shrink-0">
-                    {agentId}
-                  </span>
-
-                  <span className="text-xs font-medium text-surface-700 truncate">
-                    {cfg.label}
-                  </span>
-
+                  <span className="font-mono text-[10px] text-surface-300 w-[52px] shrink-0">{agentId}</span>
+                  <span className="text-[11px] font-medium text-surface-600 truncate">{cfg.label}</span>
                   {detail && (
-                    <span
-                      className={`ml-auto text-xs font-semibold font-mono tabular-nums shrink-0 ${
-                        type.startsWith("payment:")
-                          ? "text-fiber-600"
-                          : "text-surface-400"
-                      }`}
-                    >
+                    <span className={`ml-auto text-[11px] font-semibold font-mono tabular-nums shrink-0 ${
+                      type.startsWith("payment:") ? "text-fiber-600" : "text-surface-400"
+                    }`}>
                       {detail}
                     </span>
                   )}
                 </div>
-
-                {/* On-chain tx link */}
                 {onChainTxHash && (
-                  <div className="mt-1.5 ml-[134px]">
+                  <div className="mt-1 ml-[72px]">
                     <a
                       href={`${EXPLORER_BASE}${onChainTxHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[10px] font-mono text-fiber-500 hover:text-fiber-700 transition-colors group"
+                      className="inline-flex items-center gap-1 text-[10px] font-mono text-fiber-500 hover:text-fiber-700 transition-colors"
                     >
-                      <span className="w-3.5 h-3.5 rounded bg-fiber-50 flex items-center justify-center text-[8px] group-hover:bg-fiber-100">
-                        {"\u26D3"}
-                      </span>
-                      <span>
-                        {onChainTxHash.slice(0, 10)}...{onChainTxHash.slice(-8)}
-                      </span>
-                      <span className="text-fiber-300 group-hover:text-fiber-500">
-                        {"\u2197"}
-                      </span>
+                      {onChainTxHash.slice(0, 10)}...{onChainTxHash.slice(-6)} {"\u2197"}
                     </a>
                   </div>
                 )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Truncation notice */}
+      {filtered.length > 50 && (
+        <div className="px-5 py-2 border-t border-surface-100 text-center">
+          <span className="text-[10px] text-surface-400">
+            Showing 50 of {filtered.length} events
+          </span>
         </div>
       )}
     </div>
@@ -217,5 +225,5 @@ function formatShannons(value: string | undefined): string {
   if (!value || value === "0" || value === "0n") return "0 CKB";
   const clean = value.replace(/n$/, "");
   const num = Number(clean) / 1e8;
-  return `${num.toFixed(4)} CKB`;
+  return `${num.toFixed(2)} CKB`;
 }
