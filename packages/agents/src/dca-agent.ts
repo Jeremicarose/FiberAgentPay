@@ -100,6 +100,7 @@ export class DCAAgent extends BaseAgent {
         const payment = await this.safePayment(
           `DCA purchase #${this.purchasesMade + 1}`,
           this.config.amountPerInterval,
+          this.config.recipientAddress || undefined,
         );
 
         if (payment) {

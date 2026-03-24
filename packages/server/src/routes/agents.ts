@@ -72,6 +72,7 @@ export function createAgentRoutes(scheduler: AgentScheduler): Hono {
           amountPerInterval: BigInt(body.amountPerInterval),
           intervalMs: body.intervalMs ?? 10000,
           totalPurchases: body.totalPurchases ?? 0,
+          recipientAddress: body.recipientAddress ?? "",
           udtTypeScriptHash: body.udtTypeScriptHash,
         } satisfies DCAAgentConfig;
         break;

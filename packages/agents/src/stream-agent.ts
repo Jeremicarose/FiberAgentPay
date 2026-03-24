@@ -82,6 +82,7 @@ export class StreamAgent extends BaseAgent {
         const payment = await this.safePayment(
           `Stream tick #${this.tickCount + 1} to ${this.config.recipient}`,
           this.config.amountPerTick,
+          this.config.recipient || undefined,
         );
 
         if (payment) {
