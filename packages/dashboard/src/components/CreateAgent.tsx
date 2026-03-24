@@ -3,6 +3,7 @@ import { agentsApi } from "../lib/api";
 
 interface CreateAgentProps {
   onCreated: () => void;
+  hasAgents?: boolean;
 }
 
 type AgentTypeKey = "dca" | "stream" | "commerce";
@@ -116,7 +117,7 @@ const COMMERCE_PRESETS = [
   },
 ];
 
-export function CreateAgent({ onCreated }: CreateAgentProps) {
+export function CreateAgent({ onCreated, hasAgents = false }: CreateAgentProps) {
   const [type, setType] = useState<AgentTypeKey>("commerce");
   const [creating, setCreating] = useState(false);
   const [launching, setLaunching] = useState(false);
