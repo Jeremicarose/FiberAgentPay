@@ -331,9 +331,9 @@ export class CommerceAgent extends BaseAgent {
           ServiceRegistry.submitRequest(request);
 
           console.log(
-            `[Commerce ${this.config.id.slice(0, 8)}] SPENT ${selected.pricePerRequest} shannons ` +
+            `[Commerce ${this.config.id.slice(0, 8)}] SPENT ${price} shannons ` +
             `→ ${selected.providerId.slice(0, 8)} for "${selected.name}" ` +
-            `(budget remaining: ${availableBudget - selected.pricePerRequest})`,
+            `(budget remaining: ${availableBudget - price})`,
           );
         }
       } catch (err) {
