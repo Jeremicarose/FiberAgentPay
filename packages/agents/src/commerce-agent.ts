@@ -210,7 +210,8 @@ export class CommerceAgent extends BaseAgent {
         const result = await this.fulfillService(service, request);
 
         // Record the earning
-        this.addEarnings(service.pricePerRequest);
+        const servicePrice = BigInt(service.pricePerRequest);
+        this.addEarnings(servicePrice);
 
         ServiceRegistry.updateRequest(request.requestId, {
           status: "fulfilled",
