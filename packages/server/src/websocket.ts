@@ -74,15 +74,25 @@ export function createWebSocketServer(scheduler: AgentScheduler): WebSocketServe
   });
 
   scheduler.on("agentStateChange", () => {
-    // Send full state snapshot on any change
-    // This is slightly wasteful (could send just the delta)
-    // but ensures the dashboard is always in sync
     broadcast({
       type: "snapshot",
       agents: scheduler.getAllStates(),
       timestamp: Date.now(),
     });
   });
+
+  // Periodic snapshot: push fresh balances/earnings every 5 seconds
+  // Agent earnings and balances change between state transitions,
+  // so we need periodic updates to keep the dashboard in sync.
+  setInterval(() => {
+    if (clients.size > 0) {
+      broadcast({
+        type: "snapshot",
+        agents: scheduler.getAllStates(),
+        timestamp: Date.now(),
+      });
+    }
+  }, 5000);
 
   return wss;
 }
