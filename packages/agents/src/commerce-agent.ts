@@ -289,11 +289,14 @@ export class CommerceAgent extends BaseAgent {
       const available = ServiceRegistry.findServices(desiredCategory);
 
       // Filter: not our own services, affordable, within budget
+      // Ensure BigInt comparisons (prices may arrive as strings from JSON)
       const candidates = available.filter(
-        (s) =>
-          s.providerId !== this.config.id &&
-          s.pricePerRequest <= this.config.maxPricePerRequest &&
-          s.pricePerRequest <= availableBudget,
+        (s) => {
+          const price = BigInt(s.pricePerRequest);
+          return s.providerId !== this.config.id &&
+            price <= this.config.maxPricePerRequest &&
+            price <= availableBudget;
+        },
       );
 
       if (candidates.length === 0) continue;
