@@ -227,7 +227,7 @@ export class CommerceAgent extends BaseAgent {
             id: generateId(),
             agentId: this.config.id,
             channelId: "",
-            amount: service.pricePerRequest,
+            amount: servicePrice,
             paymentHash: request.paymentHash ?? "",
             status: "completed",
             direction: "inbound",
