@@ -119,8 +119,32 @@ const COMMERCE_PRESETS = [
 export function CreateAgent({ onCreated }: CreateAgentProps) {
   const [type, setType] = useState<AgentTypeKey>("commerce");
   const [creating, setCreating] = useState(false);
+  const [launching, setLaunching] = useState(false);
   const [error, setError] = useState("");
   const [selectedPreset, setSelectedPreset] = useState(0);
+
+  /** One-click: create all 3 Commerce agents and start them */
+  async function handleLaunchEconomy() {
+    setLaunching(true);
+    setError("");
+    try {
+      const ids: string[] = [];
+      for (const preset of COMMERCE_PRESETS) {
+        const result = await agentsApi.create(preset.config) as Record<string, unknown>;
+        const config = result.config as Record<string, unknown>;
+        ids.push(config.id as string);
+      }
+      // Start all agents
+      for (const id of ids) {
+        await agentsApi.start(id);
+      }
+      onCreated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to launch economy");
+    } finally {
+      setLaunching(false);
+    }
+  }
 
   async function handleCreate() {
     setCreating(true);
