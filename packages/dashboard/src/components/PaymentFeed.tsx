@@ -41,7 +41,7 @@ const EVENT_CONFIG: Record<
   "commerce:request_fulfilled": { icon: "\u2713", color: "text-fiber-600", bg: "bg-fiber-50", label: "Fulfilled" },
 };
 
-export function PaymentFeed({ events }: PaymentFeedProps) {
+export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }: PaymentFeedProps) {
   const [filter, setFilter] = useState<FilterKey>("all");
 
   const filtered = filter === "all"
@@ -165,13 +165,26 @@ export function PaymentFeed({ events }: PaymentFeedProps) {
             const agentId = ((e.agentId as string) ?? "").slice(0, 8);
 
             let detail = "";
+            let narrative = "";
             let onChainTxHash: string | undefined;
+            const senderName = agentNames[(e.agentId as string) ?? ""] || agentId;
             if (type === "payment:sent" || type === "payment:received") {
               const payment = e.payment as Record<string, unknown>;
               detail = formatShannons(payment?.amount as string);
               onChainTxHash = payment?.onChainTxHash as string | undefined;
+              const recipientAddr = payment?.recipientAddress as string | undefined;
+              const recipientName = recipientAddr ? (agentAddressToName[recipientAddr] || "") : "";
+              if (type === "payment:sent" && recipientName) {
+                narrative = `${senderName} paid ${recipientName}`;
+              } else if (type === "payment:received") {
+                narrative = `${senderName} received payment`;
+              }
             } else if (type === "agent:error") {
               detail = (e.error as string) ?? "";
+            } else if (type === "commerce:service_listed") {
+              narrative = `${senderName} listed a service`;
+            } else if (type === "commerce:request_fulfilled") {
+              narrative = `${senderName} fulfilled a request`;
             }
 
             return (
