@@ -124,9 +124,11 @@ export class CommerceAgent extends BaseAgent {
     );
 
     // Register our services with our wallet address
+    // Ensure pricePerRequest is BigInt (may arrive as string from JSON)
     for (const service of this.config.offeredServices) {
       const listing: ServiceListing = {
         ...service,
+        pricePerRequest: BigInt(service.pricePerRequest),
         providerId: this.config.id,
         providerAddress: this.wallet.address,
         isActive: true,
