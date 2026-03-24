@@ -115,25 +115,24 @@ export function DashboardPage() {
 
   return (
     <Layout connected={connected}>
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* === EMPTY STATE: Welcome Hero === */}
         {agents.length === 0 ? (
           <div className="animate-fade-in">
-            <div className="text-center max-w-2xl mx-auto pt-8 pb-10">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fiber-500 to-violet-500 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-fiber-500/20">
-                <span className="text-white text-2xl font-bold">F</span>
+            <div className="text-center max-w-3xl mx-auto pt-12 pb-14">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-fiber-500 to-violet-500 flex items-center justify-center mx-auto mb-8 shadow-xl shadow-fiber-500/25">
+                <span className="text-white text-3xl font-black">F</span>
               </div>
-              <h1 className="text-2xl font-bold text-surface-900 mb-3">
-                AI Agent Economy on CKB
+              <h1 className="text-5xl font-black text-surface-900 mb-4 tracking-tight">
+                AI Agent Economy
               </h1>
-              <p className="text-surface-500 text-sm leading-relaxed mb-8 max-w-lg mx-auto">
+              <p className="text-surface-500 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
                 Watch autonomous AI agents trade services with each other using real
-                cryptocurrency on the CKB blockchain. Every payment is a real
-                on-chain transaction you can verify.
+                cryptocurrency on CKB. Every payment is a verifiable on-chain transaction.
               </p>
 
               {/* Pipeline flow diagram */}
-              <div className="grid grid-cols-3 gap-2 mb-8 max-w-lg mx-auto">
+              <div className="grid grid-cols-3 gap-6 mb-10 max-w-2xl mx-auto">
                 <StepCard step="1" title="Commerce" desc="Agents discover and buy services from each other" />
                 <StepCard step="2" title="Stream" desc="Continuous micropayments for ongoing service access" />
                 <StepCard step="3" title="DCA" desc="Periodic reinvestment of profits back into the economy" />
@@ -143,18 +142,18 @@ export function DashboardPage() {
               <button
                 onClick={handleLaunchPipeline}
                 disabled={launching}
-                className="px-8 py-3.5 text-base font-bold rounded-xl bg-gradient-to-r from-violet-600 via-fiber-500 to-blue-500 text-white hover:opacity-90 disabled:opacity-50 transition-all duration-200 shadow-lg shadow-fiber-500/25"
+                className="px-10 py-4 text-lg font-bold rounded-2xl bg-gradient-to-r from-violet-600 via-fiber-500 to-blue-500 text-white hover:opacity-90 disabled:opacity-50 transition-all duration-200 shadow-xl shadow-fiber-500/30"
               >
                 {launching && launchType === "pipeline" ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <span className="flex items-center justify-center gap-3">
+                    <div className="w-6 h-6 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                     Creating pipeline (funding wallets...)
                   </span>
                 ) : (
                   "Launch Pipeline Economy"
                 )}
               </button>
-              <p className="text-xs text-surface-400 mt-3">
+              <p className="text-sm text-surface-400 mt-4 font-medium">
                 Commerce finds opportunity, Stream pays for it, DCA reinvests profits
               </p>
 
@@ -162,11 +161,11 @@ export function DashboardPage() {
               <button
                 onClick={handleLaunchEconomy}
                 disabled={launching}
-                className="mt-4 px-5 py-2 text-xs font-medium rounded-lg border border-surface-200 text-surface-500 hover:text-surface-700 hover:border-surface-300 disabled:opacity-50 transition-all"
+                className="mt-5 px-6 py-2.5 text-sm font-semibold rounded-xl border border-surface-200 text-surface-500 hover:text-surface-700 hover:border-surface-300 disabled:opacity-50 transition-all"
               >
                 {launching && launchType === "economy" ? (
                   <span className="flex items-center justify-center gap-2">
-                    <div className="w-3 h-3 rounded-full border-2 border-surface-300 border-t-surface-600 animate-spin" />
+                    <div className="w-4 h-4 rounded-full border-2 border-surface-300 border-t-surface-600 animate-spin" />
                     Creating...
                   </span>
                 ) : (
@@ -176,7 +175,7 @@ export function DashboardPage() {
             </div>
 
             {/* Still show wallet + manual create below */}
-            <div className="max-w-sm mx-auto space-y-5">
+            <div className="max-w-md mx-auto space-y-6">
               <WalletInfo />
             </div>
           </div>
@@ -185,22 +184,22 @@ export function DashboardPage() {
           <div className="animate-fade-in">
             {/* Live economy banner */}
             {activeCount > 0 && (
-              <div className="mb-4 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fiber-50 to-violet-50 border border-fiber-200/50 flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-fiber-500 status-pulse" />
-                  <span className="text-sm font-medium text-surface-700">
+              <div className="mb-6 px-6 py-4 rounded-2xl bg-gradient-to-r from-fiber-50 to-violet-50 border border-fiber-200/50 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-fiber-500 status-pulse" />
+                  <span className="text-base font-semibold text-surface-800">
                     Economy is live — {activeCount} agent{activeCount !== 1 ? "s" : ""} trading autonomously
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-xs font-medium text-surface-500">
+                <div className="flex items-center gap-5 text-sm font-semibold text-surface-500">
                   <span>{onChainTxs.size} on-chain tx{onChainTxs.size !== 1 ? "s" : ""}</span>
                   <span>{totalVolumeCkb.toFixed(0)} CKB traded</span>
                 </div>
               </div>
             )}
 
-            {/* Compact stat pills */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
+            {/* Stat pills */}
+            <div className="flex items-center gap-3 mb-6 flex-wrap">
               <Pill label="Agents" value={String(agents.length)} />
               <Pill label="Active" value={String(activeCount)} accent={activeCount > 0} />
               <Pill label="On-Chain" value={String(onChainTxs.size)} accent={onChainTxs.size > 0} />
@@ -209,20 +208,20 @@ export function DashboardPage() {
 
             {/* Economy visualization */}
             {agents.length >= 2 && (
-              <div className="mb-5">
+              <div className="mb-6">
                 <EconomyGraph agents={agents} events={events} />
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left: Agents + Feed */}
-              <div className="lg:col-span-2 space-y-5">
+              <div className="lg:col-span-2 space-y-6">
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold text-surface-800">Agents</h2>
-                    <span className="text-xs text-surface-400">{agents.length} agent{agents.length !== 1 ? "s" : ""}</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-surface-900">Agents</h2>
+                    <span className="text-sm font-medium text-surface-400">{agents.length} agent{agents.length !== 1 ? "s" : ""}</span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {agents.map((agent) => {
                       const a = agent as Record<string, unknown>;
                       const config = a.config as Record<string, unknown>;
@@ -245,7 +244,7 @@ export function DashboardPage() {
               </div>
 
               {/* Right: Create + Wallet */}
-              <div className="space-y-5">
+              <div className="space-y-6">
                 <CreateAgent onCreated={fetchAgents} hasAgents={agents.length > 0} />
                 <WalletInfo />
               </div>
@@ -260,22 +259,22 @@ export function DashboardPage() {
 function StepCard({ step, title, desc }: { step: string; title: string; desc: string }) {
   return (
     <div className="text-center">
-      <div className="w-8 h-8 rounded-full bg-fiber-100 text-fiber-600 flex items-center justify-center mx-auto mb-2 text-xs font-bold">
+      <div className="w-11 h-11 rounded-full bg-fiber-100 text-fiber-700 flex items-center justify-center mx-auto mb-3 text-sm font-black">
         {step}
       </div>
-      <p className="text-xs font-semibold text-surface-800 mb-1">{title}</p>
-      <p className="text-[10px] text-surface-400 leading-relaxed">{desc}</p>
+      <p className="text-base font-bold text-surface-900 mb-1">{title}</p>
+      <p className="text-sm text-surface-400 leading-relaxed">{desc}</p>
     </div>
   );
 }
 
 function Pill({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${
+    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium ${
       accent ? "bg-fiber-50 border-fiber-200 text-fiber-700" : "bg-white border-surface-200 text-surface-600"
     }`}>
-      <span className="text-surface-400 uppercase tracking-wider text-[9px]">{label}</span>
-      <span className={`font-semibold tabular-nums ${accent ? "text-fiber-600" : "text-surface-800"}`}>{value}</span>
+      <span className="text-surface-400 uppercase tracking-wider text-xs font-semibold">{label}</span>
+      <span className={`font-bold tabular-nums ${accent ? "text-fiber-600" : "text-surface-800"}`}>{value}</span>
     </div>
   );
 }
