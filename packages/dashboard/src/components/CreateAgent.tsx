@@ -5,6 +5,8 @@ interface CreateAgentProps {
   onCreated: () => void;
 }
 
+type AgentTypeKey = "dca" | "stream" | "commerce";
+
 const AGENT_TYPES = [
   {
     key: "dca" as const,
@@ -44,10 +46,81 @@ const COLOR_MAP: Record<string, { selected: string; idle: string }> = {
   },
 };
 
+/**
+ * Pre-built Commerce agent presets for the 3-agent circular economy.
+ * Each sells one service and wants another — forming a trading loop.
+ */
+const COMMERCE_PRESETS = [
+  {
+    label: "Data Provider",
+    desc: "Sells weather data, buys compute",
+    config: {
+      type: "commerce",
+      name: "Data Provider",
+      offeredServices: [{
+        serviceId: "weather-1",
+        name: "Weather Data",
+        description: "Real-time weather feed",
+        pricePerRequest: "4000000000",
+        category: "data_feed",
+        providerId: "",
+        providerAddress: "",
+        isActive: true,
+      }],
+      desiredServices: ["computation"],
+      maxPricePerRequest: "10000000000",
+      reinvestPercent: 80,
+    },
+  },
+  {
+    label: "Analyst",
+    desc: "Sells analysis, buys data feeds",
+    config: {
+      type: "commerce",
+      name: "Analyst",
+      offeredServices: [{
+        serviceId: "analysis-1",
+        name: "Market Analysis",
+        description: "AI-powered market analysis",
+        pricePerRequest: "8000000000",
+        category: "computation",
+        providerId: "",
+        providerAddress: "",
+        isActive: true,
+      }],
+      desiredServices: ["data_feed"],
+      maxPricePerRequest: "10000000000",
+      reinvestPercent: 80,
+    },
+  },
+  {
+    label: "Compute Node",
+    desc: "Sells cheap compute, buys analysis",
+    config: {
+      type: "commerce",
+      name: "Compute Node",
+      offeredServices: [{
+        serviceId: "compute-1",
+        name: "Fast Compute",
+        description: "Low-cost computation service",
+        pricePerRequest: "2000000000",
+        category: "computation",
+        providerId: "",
+        providerAddress: "",
+        isActive: true,
+      }],
+      desiredServices: ["computation"],
+      maxPricePerRequest: "10000000000",
+      reinvestPercent: 80,
+    },
+  },
+];
+
 export function CreateAgent({ onCreated }: CreateAgentProps) {
-  const [type, setType] = useState<"dca" | "stream" | "commerce">("dca");
+  const [type, setType] = useState<AgentTypeKey>("commerce");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [selectedPreset, setSelectedPreset] = useState(0);
 
   async function handleCreate() {
     setCreating(true);
@@ -61,8 +134,8 @@ export function CreateAgent({ onCreated }: CreateAgentProps) {
           config = {
             type: "dca",
             name: "DCA Agent",
-            amountPerInterval: "100000000",
-            intervalMs: 10000,
+            amountPerInterval: "6100000000",
+            intervalMs: 15000,
             totalPurchases: 10,
           };
           break;
@@ -70,33 +143,22 @@ export function CreateAgent({ onCreated }: CreateAgentProps) {
           config = {
             type: "stream",
             name: "Stream Agent",
-            amountPerTick: "1000000",
-            tickIntervalMs: 1000,
-            recipient: "stream-demo",
+            amountPerTick: "6100000000",
+            tickIntervalMs: 5000,
+            recipient: "",
             description: "Demo streaming payment",
           };
           break;
         case "commerce":
-          config = {
-            type: "commerce",
-            name: "Commerce Agent",
-            offeredServices: [
-              {
-                serviceId: "data-feed-1",
-                name: "CKB Price Feed",
-                description: "Real-time CKB price data",
-                pricePerRequest: "1000000",
-                category: "data_feed",
-              },
-            ],
-            desiredServices: ["computation", "oracle"],
-            maxPricePerRequest: "5000000",
-            useAINegotiation: false,
-          };
+          config = COMMERCE_PRESETS[selectedPreset].config;
           break;
       }
 
       await agentsApi.create(config);
+      // Auto-advance preset so next click creates the next agent
+      if (type === "commerce") {
+        setSelectedPreset((prev) => (prev + 1) % COMMERCE_PRESETS.length);
+      }
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create agent");
@@ -148,6 +210,41 @@ export function CreateAgent({ onCreated }: CreateAgentProps) {
           })}
         </div>
 
+        {/* Commerce preset selector */}
+        {type === "commerce" && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wider font-medium text-surface-400">
+              Agent Role
+            </p>
+            {COMMERCE_PRESETS.map((preset, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedPreset(i)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all duration-150 ${
+                  selectedPreset === i
+                    ? "border-violet-400 bg-violet-50/50 ring-1 ring-violet-200"
+                    : "border-surface-200/80 hover:border-violet-200 hover:bg-violet-50/20"
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-semibold text-surface-700">
+                    {preset.label}
+                  </span>
+                  <p className="text-[10px] text-surface-400 truncate">
+                    {preset.desc}
+                  </p>
+                </div>
+                {selectedPreset === i && (
+                  <span className="text-violet-500 text-xs font-bold">{"\u2713"}</span>
+                )}
+              </button>
+            ))}
+            <p className="text-[10px] text-surface-400 leading-relaxed mt-1">
+              Create all 3 roles, then start them to see the circular economy.
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
             {error}
@@ -164,6 +261,8 @@ export function CreateAgent({ onCreated }: CreateAgentProps) {
               <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
               Creating...
             </span>
+          ) : type === "commerce" ? (
+            `Create "${COMMERCE_PRESETS[selectedPreset].label}"`
           ) : (
             `Create ${type.toUpperCase()} Agent`
           )}
