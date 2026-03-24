@@ -154,6 +154,7 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
           Create 2+ agents to see the economy graph
         </div>
       ) : (
+        <>
         <svg
           ref={svgRef}
           viewBox={`0 0 ${dims.w} ${dims.h}`}
@@ -352,6 +353,7 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
             </span>
           )}
         </div>
+        </>
       )}
     </div>
   );
