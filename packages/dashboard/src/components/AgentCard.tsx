@@ -19,6 +19,14 @@ const TYPE_CONFIG: Record<string, { label: string; icon: string; color: string; 
   commerce: { label: "Commerce", icon: "\u2194", color: "text-violet-600", border: "border-violet-300", desc: "Buys and sells services with other agents" },
 };
 
+/** Pipeline-specific role descriptions (matched by agent name) */
+const PIPELINE_ROLES: Record<string, string> = {
+  "Payment Stream": "Continuously pays Data Provider for service access",
+  "Reinvestor": "Periodically reinvests profits into Payment Stream",
+  "Data Provider": "Sells weather data, earns from Analyst and Stream",
+  "Analyst": "Buys data feeds, sells market analysis",
+};
+
 export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   const config = agent.config as Record<string, unknown>;
   const status = agent.status as string;
@@ -26,6 +34,8 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   const type = config.type as string;
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
   const typeCfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.dca;
+  const agentName = (config.name as string) || "";
+  const roleDesc = PIPELINE_ROLES[agentName] || typeCfg.desc;
 
   const address = (agent.address as string) || "";
   const earnings = agent.earnings as string | undefined;
@@ -62,7 +72,7 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
             <h3 className="text-sm font-semibold text-surface-800 truncate">
               {config.name as string}
             </h3>
-            <p className="text-[10px] text-surface-400 truncate">{typeCfg.desc}</p>
+            <p className="text-[10px] text-surface-400 truncate">{roleDesc}</p>
           </div>
         </div>
         <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusCfg.bg} ${statusCfg.color}`}>
