@@ -31,6 +31,7 @@ export function DashboardPage() {
   const { agents: wsAgents, events, connected } = useWebSocket();
   const [polledAgents, setPolledAgents] = useState<unknown[]>([]);
   const [launching, setLaunching] = useState(false);
+  const [launchType, setLaunchType] = useState<"pipeline" | "economy" | null>(null);
 
   const agents = wsAgents.length > 0 ? wsAgents : polledAgents;
 
@@ -63,8 +64,23 @@ export function DashboardPage() {
     if (hash) onChainTxs.add(hash);
   }
 
+  async function handleLaunchPipeline() {
+    setLaunching(true);
+    setLaunchType("pipeline");
+    try {
+      await agentsApi.launchPipeline();
+      fetchAgents();
+    } catch (err) {
+      console.error("Pipeline launch failed:", err);
+    } finally {
+      setLaunching(false);
+      setLaunchType(null);
+    }
+  }
+
   async function handleLaunchEconomy() {
     setLaunching(true);
+    setLaunchType("economy");
     try {
       const ids: string[] = [];
       for (const preset of ECONOMY_PRESETS) {
@@ -80,6 +96,7 @@ export function DashboardPage() {
       console.error("Launch failed:", err);
     } finally {
       setLaunching(false);
+      setLaunchType(null);
     }
   }
 
@@ -115,30 +132,47 @@ export function DashboardPage() {
                 on-chain transaction you can verify.
               </p>
 
-              {/* How it works — 3 steps */}
-              <div className="grid grid-cols-3 gap-4 mb-8 max-w-lg mx-auto">
-                <StepCard step="1" title="Create" desc="3 agents are created, each with its own crypto wallet" />
-                <StepCard step="2" title="Fund" desc="Each wallet receives 500 CKB from the main treasury" />
-                <StepCard step="3" title="Trade" desc="Agents buy and sell services from each other autonomously" />
+              {/* Pipeline flow diagram */}
+              <div className="grid grid-cols-3 gap-2 mb-8 max-w-lg mx-auto">
+                <StepCard step="1" title="Commerce" desc="Agents discover and buy services from each other" />
+                <StepCard step="2" title="Stream" desc="Continuous micropayments for ongoing service access" />
+                <StepCard step="3" title="DCA" desc="Periodic reinvestment of profits back into the economy" />
               </div>
 
+              {/* Primary: Pipeline Economy */}
               <button
-                onClick={handleLaunchEconomy}
+                onClick={handleLaunchPipeline}
                 disabled={launching}
                 className="px-8 py-3.5 text-base font-bold rounded-xl bg-gradient-to-r from-violet-600 via-fiber-500 to-blue-500 text-white hover:opacity-90 disabled:opacity-50 transition-all duration-200 shadow-lg shadow-fiber-500/25"
               >
-                {launching ? (
+                {launching && launchType === "pipeline" ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    Creating agents and starting economy...
+                    Creating pipeline (funding wallets...)
                   </span>
                 ) : (
-                  "Launch Demo Economy"
+                  "Launch Pipeline Economy"
                 )}
               </button>
               <p className="text-xs text-surface-400 mt-3">
-                Creates 3 agents: Data Provider, Analyst, and Compute Node
+                Commerce finds opportunity, Stream pays for it, DCA reinvests profits
               </p>
+
+              {/* Secondary: Simple Economy */}
+              <button
+                onClick={handleLaunchEconomy}
+                disabled={launching}
+                className="mt-4 px-5 py-2 text-xs font-medium rounded-lg border border-surface-200 text-surface-500 hover:text-surface-700 hover:border-surface-300 disabled:opacity-50 transition-all"
+              >
+                {launching && launchType === "economy" ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-3 h-3 rounded-full border-2 border-surface-300 border-t-surface-600 animate-spin" />
+                    Creating...
+                  </span>
+                ) : (
+                  "Or launch simple 3-agent commerce economy"
+                )}
+              </button>
             </div>
 
             {/* Still show wallet + manual create below */}
