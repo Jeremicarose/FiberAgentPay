@@ -135,20 +135,8 @@ export function createAgentRoutes(scheduler: AgentScheduler): Hono {
     try {
       const ids = await scheduler.createPipeline();
 
-      // Fund and start agents with delays between funding txs
-      // CKB cell model requires waiting between L1 transfers
-      for (let i = 0; i < ids.length; i++) {
-        if (i > 0) {
-          // Wait 8s between funding transactions to avoid cell conflicts
-          await new Promise((r) => setTimeout(r, 8_000));
-        }
-        await scheduler.fundAgent(ids[i]);
-      }
-
-      // Wait for funding to propagate before starting
-      await new Promise((r) => setTimeout(r, 12_000));
-
-      // Start all agents
+      // Start all agents — startAgent() handles funding internally
+      // (fire-and-forget funding + 15s balance refresh)
       for (const id of ids) {
         await scheduler.startAgent(id);
       }
