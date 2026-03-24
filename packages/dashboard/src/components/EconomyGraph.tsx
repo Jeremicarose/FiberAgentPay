@@ -129,19 +129,24 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
       className="bg-surface-900 rounded-2xl border border-surface-700/50 overflow-hidden animate-fade-in"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-surface-700/40">
-        <div className="flex items-center gap-2.5">
-          <h2 className="text-sm font-semibold text-surface-100 tracking-wide">Economy Flow</h2>
-          {arcs.length > 0 && (
-            <span className="flex items-center gap-1.5 text-[10px] font-medium text-fiber-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-fiber-400 status-pulse" />
-              {arcs.length} active
-            </span>
-          )}
+      <div className="px-5 py-3 border-b border-surface-700/40">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-sm font-semibold text-surface-100 tracking-wide">Economy Flow</h2>
+            {arcs.length > 0 && (
+              <span className="flex items-center gap-1.5 text-[10px] font-medium text-fiber-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-fiber-400 status-pulse" />
+                {arcs.length} active
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] uppercase tracking-widest font-medium text-surface-500">
+            {agents.length} node{agents.length !== 1 ? "s" : ""}
+          </span>
         </div>
-        <span className="text-[10px] uppercase tracking-widest font-medium text-surface-500">
-          {agents.length} node{agents.length !== 1 ? "s" : ""}
-        </span>
+        <p className="text-[11px] text-surface-400 mt-1">
+          Agents discover and buy services from each other. Arrows show real CKB payments on the blockchain.
+        </p>
       </div>
 
       {agents.length < 2 ? (

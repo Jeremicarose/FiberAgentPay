@@ -200,33 +200,43 @@ export function CreateAgent({ onCreated, hasAgents = false }: CreateAgentProps) 
         </h2>
       </div>
 
-      {/* One-click economy launcher */}
-      <div className="px-5 pt-4 pb-2">
-        <button
-          onClick={handleLaunchEconomy}
-          disabled={launching}
-          className="w-full px-4 py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-violet-600 via-fiber-500 to-blue-500 text-white hover:opacity-90 disabled:opacity-50 transition-all duration-200 shadow-md shadow-fiber-500/25"
-        >
-          {launching ? (
-            <span className="flex items-center justify-center gap-2">
-              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-              Launching Economy...
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              {"\u26A1"} Launch 3-Agent Economy
-            </span>
-          )}
-        </button>
-        <p className="text-[10px] text-surface-400 text-center mt-1.5">
-          Creates Data Provider + Analyst + Compute Node and starts them
-        </p>
-      </div>
+      {/* One-click economy launcher — only show when no agents exist */}
+      {!hasAgents && (
+        <>
+          <div className="px-5 pt-4 pb-2">
+            <button
+              onClick={handleLaunchEconomy}
+              disabled={launching}
+              className="w-full px-4 py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-violet-600 via-fiber-500 to-blue-500 text-white hover:opacity-90 disabled:opacity-50 transition-all duration-200 shadow-md shadow-fiber-500/25"
+            >
+              {launching ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  Launching Economy...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  {"\u26A1"} Launch 3-Agent Economy
+                </span>
+              )}
+            </button>
+            <p className="text-[10px] text-surface-400 text-center mt-1.5">
+              Creates Data Provider + Analyst + Compute Node and starts them
+            </p>
+          </div>
 
-      <div className="px-5 py-2">
-        <div className="border-t border-surface-100" />
-        <p className="text-[10px] text-surface-400 text-center py-2">or create individually</p>
-      </div>
+          <div className="px-5 py-2">
+            <div className="border-t border-surface-100" />
+            <p className="text-[10px] text-surface-400 text-center py-2">or create individually</p>
+          </div>
+        </>
+      )}
+
+      {hasAgents && (
+        <div className="px-5 pt-4 pb-2">
+          <p className="text-xs text-surface-500 text-center">Add another agent to the economy</p>
+        </div>
+      )}
 
       <div className="p-5 space-y-4">
         {/* Type selector cards */}
