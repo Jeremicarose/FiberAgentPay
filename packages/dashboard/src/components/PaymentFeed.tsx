@@ -4,6 +4,8 @@ const EXPLORER_BASE = "https://pudge.explorer.nervos.org/transaction/";
 
 interface PaymentFeedProps {
   events: unknown[];
+  agentNames?: Record<string, string>;
+  agentAddressToName?: Record<string, string>;
 }
 
 type FilterKey = "all" | "payments" | "commerce" | "system";
