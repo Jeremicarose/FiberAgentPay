@@ -101,9 +101,9 @@ export const MIN_CELL_CAPACITY = 61n * CKB_UNIT;
  * All values in shannons.
  */
 export const DEFAULT_SAFETY_LIMITS = {
-  maxPerTx: 10n * CKB_UNIT,      // 10 CKB max per single payment
-  maxPerHour: 100n * CKB_UNIT,   // 100 CKB max per hour
-  maxTotal: 1000n * CKB_UNIT,    // 1000 CKB max total spend
+  maxPerTx: 100n * CKB_UNIT,     // 100 CKB max per single payment (must exceed 61 CKB min cell)
+  maxPerHour: 2000n * CKB_UNIT,  // 2000 CKB max per hour
+  maxTotal: 10000n * CKB_UNIT,   // 10000 CKB max total spend
 } as const;
 
 /** Default Fiber channel funding: 100 CKB */
