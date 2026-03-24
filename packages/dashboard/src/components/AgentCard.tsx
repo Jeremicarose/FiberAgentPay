@@ -80,11 +80,11 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
 
       {/* Economy stats — 2x2 grid */}
       <div className="grid grid-cols-2 gap-1.5 mb-2.5">
-        <MiniStat label="Earned" value={formatShannons(earnings)} color="text-fiber-600" />
+        <MiniStat label="Revenue" value={formatShannons(earnings)} color="text-fiber-600" />
         <MiniStat label="Spent" value={formatShannons(spent)} color="text-blue-600" />
-        <MiniStat label="Balance" value={formatShannons(balance)} color="text-surface-700" />
+        <MiniStat label="Wallet" value={formatShannons(balance)} color="text-surface-700" />
         <MiniStat
-          label="Net P&L"
+          label="Profit"
           value={`${net >= 0 ? "+" : ""}${(net / 1e8).toFixed(0)} CKB`}
           color={net >= 0 ? "text-fiber-600" : "text-red-500"}
         />
