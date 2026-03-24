@@ -71,30 +71,30 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
   return (
     <div className="bg-white rounded-2xl shadow-card border border-surface-200/50 overflow-hidden">
       {/* Header with filters */}
-      <div className="px-5 py-3 border-b border-surface-100">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-surface-800">Live Feed</h2>
+      <div className="px-6 py-4 border-b border-surface-100">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-surface-900">Live Feed</h2>
             {events.length > 0 && (
-              <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-fiber-50 text-fiber-600 tabular-nums">
+              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-fiber-50 text-fiber-600 tabular-nums">
                 {events.length}
               </span>
             )}
           </div>
           {events.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-fiber-500 status-pulse" />
-              <span className="text-[10px] uppercase tracking-wider font-medium text-surface-400">Live</span>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-fiber-500 status-pulse" />
+              <span className="text-xs uppercase tracking-wider font-bold text-surface-400">Live</span>
             </div>
           )}
         </div>
         {events.length > 0 && (
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {FILTERS.map((f) => (
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   filter === f.key
                     ? "bg-surface-800 text-white"
                     : "text-surface-400 hover:text-surface-600 hover:bg-surface-100"
@@ -109,11 +109,11 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
 
       {/* On-chain transactions banner */}
       {onChainTxs.length > 0 && (
-        <div className="px-5 py-2.5 bg-fiber-50/50 border-b border-fiber-100/50">
-          <p className="text-[10px] uppercase tracking-wider font-medium text-fiber-700 mb-1.5">
+        <div className="px-6 py-3 bg-fiber-50/50 border-b border-fiber-100/50">
+          <p className="text-xs uppercase tracking-wider font-bold text-fiber-700 mb-2">
             On-Chain Transactions ({onChainTxs.length})
           </p>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {onChainTxs.slice(0, 5).map((tx) => (
               <a
                 key={tx.hash}
@@ -122,10 +122,10 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
                 rel="noopener noreferrer"
                 className="flex items-center justify-between gap-2 group"
               >
-                <span className="font-mono text-[11px] text-fiber-600 group-hover:text-fiber-800 transition-colors">
+                <span className="font-mono text-xs text-fiber-600 group-hover:text-fiber-800 transition-colors">
                   {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
                 </span>
-                <span className="text-[10px] font-semibold text-fiber-500 tabular-nums">
+                <span className="text-xs font-bold text-fiber-500 tabular-nums">
                   {tx.amount} {"\u2197"}
                 </span>
               </a>
@@ -136,18 +136,18 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
 
       {/* Event list */}
       {displayed.length === 0 ? (
-        <div className="px-5 py-10 text-center">
-          <p className="text-sm text-surface-400">
+        <div className="px-6 py-12 text-center">
+          <p className="text-base font-medium text-surface-400">
             {events.length === 0 ? "Waiting for activity..." : "No matching events"}
           </p>
-          <p className="text-xs text-surface-300 mt-1">
+          <p className="text-sm text-surface-300 mt-2">
             {events.length === 0
               ? "Once agents are running, you'll see every payment and trade here in real time."
               : "Try a different filter."}
           </p>
         </div>
       ) : (
-        <div className="max-h-[320px] overflow-y-auto divide-y divide-surface-100/60">
+        <div className="max-h-[400px] overflow-y-auto divide-y divide-surface-100/60">
           {displayed.map((event, i) => {
             const e = event as Record<string, unknown>;
             const type = e.type as string;
@@ -188,19 +188,19 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
             }
 
             return (
-              <div key={i} className="feed-item px-4 py-2 hover:bg-surface-50/50 transition-colors">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] text-surface-300 w-[60px] shrink-0 tabular-nums">
+              <div key={i} className="feed-item px-5 py-3 hover:bg-surface-50/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-xs text-surface-300 w-[68px] shrink-0 tabular-nums">
                     {timestamp}
                   </span>
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold ${cfg.bg} ${cfg.color}`}>
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${cfg.bg} ${cfg.color}`}>
                     {cfg.icon}
                   </div>
-                  <span className="text-[11px] font-medium text-surface-600 truncate">
+                  <span className="text-sm font-medium text-surface-600 truncate">
                     {narrative || `${senderName} \u00B7 ${cfg.label}`}
                   </span>
                   {detail && (
-                    <span className={`ml-auto text-[11px] font-semibold font-mono tabular-nums shrink-0 ${
+                    <span className={`ml-auto text-sm font-bold font-mono tabular-nums shrink-0 ${
                       type.startsWith("payment:") ? "text-fiber-600" : "text-surface-400"
                     }`}>
                       {detail}
@@ -208,12 +208,12 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
                   )}
                 </div>
                 {onChainTxHash && (
-                  <div className="mt-1 ml-[72px]">
+                  <div className="mt-1.5 ml-[92px]">
                     <a
                       href={`${EXPLORER_BASE}${onChainTxHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[10px] font-mono text-fiber-500 hover:text-fiber-700 transition-colors"
+                      className="inline-flex items-center gap-1 text-xs font-mono font-medium text-fiber-500 hover:text-fiber-700 transition-colors"
                     >
                       {onChainTxHash.slice(0, 10)}...{onChainTxHash.slice(-6)} {"\u2197"}
                     </a>
@@ -227,8 +227,8 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
 
       {/* Truncation notice */}
       {filtered.length > 50 && (
-        <div className="px-5 py-2 border-t border-surface-100 text-center">
-          <span className="text-[10px] text-surface-400">
+        <div className="px-6 py-2.5 border-t border-surface-100 text-center">
+          <span className="text-xs font-medium text-surface-400">
             Showing 50 of {filtered.length} events
           </span>
         </div>
