@@ -13,10 +13,10 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; dot: string; la
   error: { color: "text-red-700", bg: "bg-red-50", dot: "bg-red-400", label: "Error" },
 };
 
-const TYPE_CONFIG: Record<string, { label: string; icon: string; color: string; border: string }> = {
-  dca: { label: "DCA", icon: "\u21BB", color: "text-fiber-600", border: "border-fiber-300" },
-  stream: { label: "Stream", icon: "\u2192", color: "text-blue-600", border: "border-blue-300" },
-  commerce: { label: "Commerce", icon: "\u2194", color: "text-violet-600", border: "border-violet-300" },
+const TYPE_CONFIG: Record<string, { label: string; icon: string; color: string; border: string; desc: string }> = {
+  dca: { label: "DCA", icon: "\u21BB", color: "text-fiber-600", border: "border-fiber-300", desc: "Makes periodic purchases on a schedule" },
+  stream: { label: "Stream", icon: "\u2192", color: "text-blue-600", border: "border-blue-300", desc: "Sends continuous micropayments over time" },
+  commerce: { label: "Commerce", icon: "\u2194", color: "text-violet-600", border: "border-violet-300", desc: "Buys and sells services with other agents" },
 };
 
 export function AgentCard({ agent, onRefresh }: AgentCardProps) {
