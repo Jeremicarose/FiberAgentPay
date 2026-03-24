@@ -13,10 +13,10 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; dot: string; la
   error: { color: "text-red-700", bg: "bg-red-50", dot: "bg-red-400", label: "Error" },
 };
 
-const TYPE_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string }> = {
-  dca: { label: "DCA", icon: "\u21BB", color: "text-fiber-700", bg: "bg-fiber-50 border-fiber-200" },
-  stream: { label: "Stream", icon: "\u2192", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
-  commerce: { label: "Commerce", icon: "\u2194", color: "text-violet-700", bg: "bg-violet-50 border-violet-200" },
+const TYPE_CONFIG: Record<string, { label: string; icon: string; color: string; border: string }> = {
+  dca: { label: "DCA", icon: "\u21BB", color: "text-fiber-600", border: "border-fiber-300" },
+  stream: { label: "Stream", icon: "\u2192", color: "text-blue-600", border: "border-blue-300" },
+  commerce: { label: "Commerce", icon: "\u2194", color: "text-violet-600", border: "border-violet-300" },
 };
 
 export function AgentCard({ agent, onRefresh }: AgentCardProps) {
@@ -32,7 +32,6 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   const balance = agent.balance as string | undefined;
   const spent = agent.totalSpent as string | undefined;
 
-  // Calculate net profit/loss
   const earningsNum = parseShannons(earnings);
   const spentNum = parseShannons(spent);
   const net = earningsNum - spentNum;
@@ -40,18 +39,10 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   async function handleAction(action: "start" | "stop" | "pause" | "resume") {
     try {
       switch (action) {
-        case "start":
-          await agentsApi.start(id);
-          break;
-        case "stop":
-          await agentsApi.stop(id);
-          break;
-        case "pause":
-          await agentsApi.pause(id);
-          break;
-        case "resume":
-          await agentsApi.resume(id);
-          break;
+        case "start": await agentsApi.start(id); break;
+        case "stop": await agentsApi.stop(id); break;
+        case "pause": await agentsApi.pause(id); break;
+        case "resume": await agentsApi.resume(id); break;
       }
       onRefresh();
     } catch (err) {
@@ -60,133 +51,81 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-card card-interactive border border-surface-200/50 p-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg ${typeCfg.bg}`}>
-            <span className={typeCfg.color}>{typeCfg.icon}</span>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-surface-800">
+    <div className={`bg-white rounded-xl shadow-card card-interactive border p-4 animate-fade-in ${
+      status === "running" ? "border-fiber-200/80" : "border-surface-200/50"
+    }`}>
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`text-base ${typeCfg.color}`}>{typeCfg.icon}</span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-surface-800 truncate">
               {config.name as string}
             </h3>
-            <span className={`inline-flex items-center gap-1 text-xs font-medium ${typeCfg.color}`}>
-              {typeCfg.label} Agent
-            </span>
           </div>
         </div>
-        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.color}`}>
+        <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusCfg.bg} ${statusCfg.color}`}>
           <div className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot} ${status === "running" ? "status-pulse" : ""}`} />
           {statusCfg.label}
         </div>
       </div>
 
-      {/* Agent address */}
+      {/* Wallet address */}
       {address && (
-        <div className="mb-3 px-3 py-1.5 bg-surface-50 rounded-lg">
-          <p className="text-[10px] uppercase tracking-wider font-medium text-surface-400 mb-0.5">Wallet</p>
-          <p className="text-[11px] font-mono text-surface-500 truncate">{address}</p>
+        <div className="mb-2.5 px-2 py-1 bg-surface-50 rounded-md">
+          <p className="text-[10px] font-mono text-surface-400 truncate">{address}</p>
         </div>
       )}
 
-      {/* Economy stats */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        <StatCell
-          label="Earned"
-          value={formatShannons(earnings)}
-          color="text-fiber-600"
-        />
-        <StatCell
-          label="Spent"
-          value={formatShannons(spent)}
-          color="text-blue-600"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <StatCell
-          label="Balance"
-          value={formatShannons(balance)}
-          color="text-surface-800"
-        />
-        <StatCell
+      {/* Economy stats — 2x2 grid */}
+      <div className="grid grid-cols-2 gap-1.5 mb-2.5">
+        <MiniStat label="Earned" value={formatShannons(earnings)} color="text-fiber-600" />
+        <MiniStat label="Spent" value={formatShannons(spent)} color="text-blue-600" />
+        <MiniStat label="Balance" value={formatShannons(balance)} color="text-surface-700" />
+        <MiniStat
           label="Net P&L"
-          value={`${net >= 0 ? "+" : ""}${(net / 1e8).toFixed(2)} CKB`}
+          value={`${net >= 0 ? "+" : ""}${(net / 1e8).toFixed(0)} CKB`}
           color={net >= 0 ? "text-fiber-600" : "text-red-500"}
         />
       </div>
 
-      {/* Payment count */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <span className="text-[10px] uppercase tracking-wider font-medium text-surface-400">
-          Payments
-        </span>
-        <span className="text-xs font-semibold text-surface-700 tabular-nums">
-          {String(agent.paymentCount)}
-        </span>
-      </div>
-
       {/* Error display */}
       {agent.error ? (
-        <div className="mb-4 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 leading-relaxed">
+        <div className="mb-2.5 px-2 py-1.5 bg-red-50 border border-red-100 rounded-lg text-[10px] text-red-600 leading-relaxed">
           {String(agent.error)}
         </div>
       ) : null}
 
       {/* Actions */}
-      <div className="flex gap-2 pt-1">
+      <div className="flex gap-1.5">
         {status === "idle" && (
-          <ActionButton onClick={() => handleAction("start")} variant="primary">
-            Start
-          </ActionButton>
+          <ActionButton onClick={() => handleAction("start")} variant="primary">Start</ActionButton>
         )}
         {status === "running" && (
           <>
-            <ActionButton onClick={() => handleAction("pause")} variant="warning">
-              Pause
-            </ActionButton>
-            <ActionButton onClick={() => handleAction("stop")} variant="danger">
-              Stop
-            </ActionButton>
+            <ActionButton onClick={() => handleAction("pause")} variant="warning">Pause</ActionButton>
+            <ActionButton onClick={() => handleAction("stop")} variant="danger">Stop</ActionButton>
           </>
         )}
         {status === "paused" && (
           <>
-            <ActionButton onClick={() => handleAction("resume")} variant="primary">
-              Resume
-            </ActionButton>
-            <ActionButton onClick={() => handleAction("stop")} variant="danger">
-              Stop
-            </ActionButton>
+            <ActionButton onClick={() => handleAction("resume")} variant="primary">Resume</ActionButton>
+            <ActionButton onClick={() => handleAction("stop")} variant="danger">Stop</ActionButton>
           </>
         )}
         {(status === "stopped" || status === "error") && (
-          <ActionButton onClick={() => agentsApi.remove(id).then(onRefresh)} variant="ghost">
-            Remove
-          </ActionButton>
+          <ActionButton onClick={() => agentsApi.remove(id).then(onRefresh)} variant="ghost">Remove</ActionButton>
         )}
       </div>
     </div>
   );
 }
 
-function StatCell({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color?: string;
-}) {
+function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="bg-surface-50 rounded-xl px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wider font-medium text-surface-400 mb-0.5">
-        {label}
-      </p>
-      <p className={`text-sm font-semibold truncate tabular-nums ${color ?? "text-surface-800"}`}>
-        {value}
-      </p>
+    <div className="bg-surface-50 rounded-lg px-2 py-1.5">
+      <p className="text-[9px] uppercase tracking-wider font-medium text-surface-400">{label}</p>
+      <p className={`text-xs font-semibold truncate tabular-nums ${color ?? "text-surface-800"}`}>{value}</p>
     </div>
   );
 }
@@ -201,20 +140,16 @@ function ActionButton({
   children: React.ReactNode;
 }) {
   const styles = {
-    primary:
-      "bg-fiber-500 text-white hover:bg-fiber-600 shadow-sm shadow-fiber-500/20",
-    warning:
-      "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100",
-    danger:
-      "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100",
-    ghost:
-      "bg-surface-100 text-surface-500 hover:bg-surface-200 hover:text-surface-700",
+    primary: "bg-fiber-500 text-white hover:bg-fiber-600 shadow-sm shadow-fiber-500/20",
+    warning: "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100",
+    danger: "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100",
+    ghost: "bg-surface-100 text-surface-500 hover:bg-surface-200 hover:text-surface-700",
   };
 
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 ${styles[variant]}`}
+      className={`px-3 py-1 text-[11px] font-semibold rounded-lg transition-all duration-150 ${styles[variant]}`}
     >
       {children}
     </button>
@@ -225,7 +160,8 @@ function formatShannons(value: string | undefined): string {
   if (!value || value === "0" || value === "0n") return "0 CKB";
   const clean = value.replace(/n$/, "");
   const num = Number(clean) / 1e8;
-  return `${num.toFixed(2)} CKB`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}k CKB`;
+  return `${num.toFixed(0)} CKB`;
 }
 
 function parseShannons(value: string | undefined): number {
