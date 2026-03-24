@@ -138,11 +138,11 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
       {displayed.length === 0 ? (
         <div className="px-5 py-10 text-center">
           <p className="text-sm text-surface-400">
-            {events.length === 0 ? "No events yet" : "No matching events"}
+            {events.length === 0 ? "Waiting for activity..." : "No matching events"}
           </p>
           <p className="text-xs text-surface-300 mt-1">
             {events.length === 0
-              ? "Create and start agents to see activity."
+              ? "Once agents are running, you'll see every payment and trade here in real time."
               : "Try a different filter."}
           </p>
         </div>
@@ -196,8 +196,9 @@ export function PaymentFeed({ events, agentNames = {}, agentAddressToName = {} }
                   <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold ${cfg.bg} ${cfg.color}`}>
                     {cfg.icon}
                   </div>
-                  <span className="font-mono text-[10px] text-surface-300 w-[52px] shrink-0">{agentId}</span>
-                  <span className="text-[11px] font-medium text-surface-600 truncate">{cfg.label}</span>
+                  <span className="text-[11px] font-medium text-surface-600 truncate">
+                    {narrative || `${senderName} \u00B7 ${cfg.label}`}
+                  </span>
                   {detail && (
                     <span className={`ml-auto text-[11px] font-semibold font-mono tabular-nums shrink-0 ${
                       type.startsWith("payment:") ? "text-fiber-600" : "text-surface-400"
