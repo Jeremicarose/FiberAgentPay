@@ -335,6 +335,23 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
             );
           })}
         </svg>
+
+        {/* Legend + hint */}
+        <div className="px-5 py-2.5 border-t border-surface-700/40 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            {Object.entries(TYPE_COLORS).map(([key, tc]) => (
+              <span key={key} className="flex items-center gap-1.5 text-[10px] text-surface-400">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tc.stroke }} />
+                {tc.label}
+              </span>
+            ))}
+          </div>
+          {agents.every((a) => a.status !== "running") && (
+            <span className="text-[10px] text-surface-500 italic">
+              Start agents to see payments flow
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
