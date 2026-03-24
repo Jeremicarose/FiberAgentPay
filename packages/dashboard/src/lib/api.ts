@@ -71,6 +71,10 @@ export const agentsApi = {
 
   remove: (id: string) =>
     request<void>(`/agents/${id}`, { method: "DELETE" }),
+
+  /** Launch the full pipeline economy: Commerce→Stream→DCA */
+  launchPipeline: () =>
+    request<{ ids: string[] }>("/agents/pipeline", { method: "POST" }),
 };
 
 // --- Channel endpoints ---
