@@ -62,6 +62,7 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
             <h3 className="text-sm font-semibold text-surface-800 truncate">
               {config.name as string}
             </h3>
+            <p className="text-[10px] text-surface-400 truncate">{typeCfg.desc}</p>
           </div>
         </div>
         <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusCfg.bg} ${statusCfg.color}`}>
