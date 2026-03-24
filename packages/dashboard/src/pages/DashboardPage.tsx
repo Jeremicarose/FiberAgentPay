@@ -48,7 +48,7 @@ export function DashboardPage() {
   }).length;
 
   // Calculate total economy volume
-  const totalVolume = paymentEvents.reduce((sum, e) => {
+  const totalVolume = paymentEvents.reduce<number>((sum, e) => {
     const payment = (e as Record<string, unknown>).payment as Record<string, unknown> | undefined;
     const amt = String(payment?.amount ?? "0").replace(/n$/, "");
     return sum + Number(amt) / 1e8;
