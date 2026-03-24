@@ -124,6 +124,46 @@ export function createAgentRoutes(scheduler: AgentScheduler): Hono {
     });
   });
 
+  /**
+   * POST /agents/pipeline — Launch the full pipeline economy
+   *
+   * Creates 4 agents wired together: Commerce→Stream→DCA
+   * Funds all of them, then starts them with staggered delays
+   * to avoid CKB cell conflicts.
+   */
+  app.post("/pipeline", async (c) => {
+    try {
+      const ids = await scheduler.createPipeline();
+
+      // Fund and start agents with delays between funding txs
+      // CKB cell model requires waiting between L1 transfers
+      for (let i = 0; i < ids.length; i++) {
+        if (i > 0) {
+          // Wait 8s between funding transactions to avoid cell conflicts
+          await new Promise((r) => setTimeout(r, 8_000));
+        }
+        await scheduler.fundAgent(ids[i]);
+      }
+
+      // Wait for funding to propagate before starting
+      await new Promise((r) => setTimeout(r, 12_000));
+
+      // Start all agents
+      for (const id of ids) {
+        await scheduler.startAgent(id);
+      }
+
+      return c.text(
+        jsonStringify({ success: true, ids, timestamp: Date.now() }),
+        201,
+        { "Content-Type": "application/json" },
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return c.json({ success: false, error: message }, 500);
+    }
+  });
+
   /** GET /agents — List all agents */
   app.get("/", (c) => {
     const states = scheduler.getAllStates();
