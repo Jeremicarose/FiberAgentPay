@@ -219,6 +219,127 @@ export class AgentScheduler extends EventEmitter {
     await Promise.all(running.map((a) => a.stop()));
   }
 
+  /**
+   * Create the full pipeline economy: Commerce → Stream → DCA
+   *
+   * Creates 4 agents wired together:
+   *   1. Data Provider (Commerce) — sells data feeds
+   *   2. Analyst (Commerce) — buys data, sells analysis
+   *   3. Payment Stream (Stream) — continuously pays Data Provider
+   *   4. Reinvestor (DCA) — periodically reinvests into Stream agent
+   *
+   * Returns agent IDs in creation order.
+   */
+  async createPipeline(): Promise<string[]> {
+    const ids: string[] = [];
+
+    // Step 1: Create Commerce agents to get their wallet addresses
+    const dpConfig: CommerceAgentConfig = {
+      id: generateId(),
+      name: "Data Provider",
+      type: "commerce",
+      maxPerTx: DEFAULT_SAFETY_LIMITS.maxPerTx,
+      maxPerHour: DEFAULT_SAFETY_LIMITS.maxPerHour,
+      maxTotal: DEFAULT_SAFETY_LIMITS.maxTotal,
+      peerId: "",
+      channelFunding: DEFAULT_CHANNEL_FUNDING,
+      offeredServices: [{
+        serviceId: "weather-1",
+        name: "Weather Data",
+        description: "Real-time weather feed",
+        pricePerRequest: 4_000_000_000n,
+        category: "data_feed",
+        providerId: "",
+        providerAddress: "",
+        isActive: true,
+      }],
+      desiredServices: ["computation"],
+      maxPricePerRequest: 10_000_000_000n,
+      useAINegotiation: false,
+      reinvestPercent: 80,
+    };
+
+    const analystConfig: CommerceAgentConfig = {
+      id: generateId(),
+      name: "Analyst",
+      type: "commerce",
+      maxPerTx: DEFAULT_SAFETY_LIMITS.maxPerTx,
+      maxPerHour: DEFAULT_SAFETY_LIMITS.maxPerHour,
+      maxTotal: DEFAULT_SAFETY_LIMITS.maxTotal,
+      peerId: "",
+      channelFunding: DEFAULT_CHANNEL_FUNDING,
+      offeredServices: [{
+        serviceId: "analysis-1",
+        name: "Market Analysis",
+        description: "AI-powered market analysis",
+        pricePerRequest: 8_000_000_000n,
+        category: "computation",
+        providerId: "",
+        providerAddress: "",
+        isActive: true,
+      }],
+      desiredServices: ["data_feed"],
+      maxPricePerRequest: 10_000_000_000n,
+      useAINegotiation: false,
+      reinvestPercent: 80,
+    };
+
+    const dataProvider = await this.createAgent(dpConfig);
+    const analyst = await this.createAgent(analystConfig);
+    ids.push(dpConfig.id, analystConfig.id);
+
+    // Step 2: Get wallet addresses for cross-wiring
+    const dpAddress = dataProvider.getState().address;
+
+    // Step 3: Create Stream agent → pays Data Provider continuously
+    const streamConfig: StreamAgentConfig = {
+      id: generateId(),
+      name: "Payment Stream",
+      type: "stream",
+      maxPerTx: DEFAULT_SAFETY_LIMITS.maxPerTx,
+      maxPerHour: DEFAULT_SAFETY_LIMITS.maxPerHour,
+      maxTotal: DEFAULT_SAFETY_LIMITS.maxTotal,
+      peerId: "",
+      channelFunding: DEFAULT_CHANNEL_FUNDING,
+      amountPerTick: 6_100_000_000n,  // 61 CKB (minimum cell)
+      tickIntervalMs: 15_000,          // every 15 seconds
+      recipient: dpAddress,
+      description: "Subscription payment to Data Provider",
+    };
+
+    const stream = await this.createAgent(streamConfig);
+    ids.push(streamConfig.id);
+
+    // Step 4: Create DCA agent → reinvests into Stream agent's wallet
+    const streamAddress = stream.getState().address;
+    const dcaConfig: DCAAgentConfig = {
+      id: generateId(),
+      name: "Reinvestor",
+      type: "dca",
+      maxPerTx: DEFAULT_SAFETY_LIMITS.maxPerTx,
+      maxPerHour: DEFAULT_SAFETY_LIMITS.maxPerHour,
+      maxTotal: DEFAULT_SAFETY_LIMITS.maxTotal,
+      peerId: "",
+      channelFunding: DEFAULT_CHANNEL_FUNDING,
+      amountPerInterval: 6_100_000_000n,  // 61 CKB per purchase
+      intervalMs: 20_000,                  // every 20 seconds
+      totalPurchases: 8,                   // reinvest 8 times then stop
+      recipientAddress: streamAddress,
+    };
+
+    await this.createAgent(dcaConfig);
+    ids.push(dcaConfig.id);
+
+    console.log(
+      `[Scheduler] Pipeline created: ${ids.length} agents wired together\n` +
+      `  Data Provider → sells to Analyst\n` +
+      `  Payment Stream → pays Data Provider (${dpAddress.slice(0, 20)}...)\n` +
+      `  Reinvestor → funds Stream (${streamAddress.slice(0, 20)}...)`,
+    );
+
+    return ids;
+  }
+
   private getAgentOrThrow(id: string): BaseAgent {
     const agent = this.agents.get(id);
     if (!agent) throw new Error(`Agent ${id} not found`);
