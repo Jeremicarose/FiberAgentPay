@@ -303,14 +303,15 @@ export class CommerceAgent extends BaseAgent {
 
       // Select based on price — cheapest first (economic rationality)
       const selected = candidates.sort((a, b) =>
-        Number(a.pricePerRequest - b.pricePerRequest),
+        Number(BigInt(a.pricePerRequest) - BigInt(b.pricePerRequest)),
       )[0];
 
       try {
         // Pay to the seller's wallet address — real CKB transfer
+        const price = BigInt(selected.pricePerRequest);
         const payment = await this.safePayment(
           `Purchase "${selected.name}" from ${selected.providerId.slice(0, 8)}`,
-          selected.pricePerRequest,
+          price,
           selected.providerAddress,
         );
 
