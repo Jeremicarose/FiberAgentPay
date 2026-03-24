@@ -61,35 +61,35 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
   }
 
   return (
-    <div className={`bg-white rounded-xl shadow-card card-interactive border p-4 animate-fade-in ${
+    <div className={`bg-white rounded-2xl shadow-card card-interactive border p-5 animate-fade-in ${
       status === "running" ? "border-fiber-200/80" : "border-surface-200/50"
     }`}>
       {/* Header row */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`text-base ${typeCfg.color}`}>{typeCfg.icon}</span>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className={`text-xl ${typeCfg.color}`}>{typeCfg.icon}</span>
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-surface-800 truncate">
+            <h3 className="text-base font-bold text-surface-900 truncate">
               {config.name as string}
             </h3>
-            <p className="text-[10px] text-surface-400 truncate">{roleDesc}</p>
+            <p className="text-xs text-surface-400 mt-0.5">{roleDesc}</p>
           </div>
         </div>
-        <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusCfg.bg} ${statusCfg.color}`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot} ${status === "running" ? "status-pulse" : ""}`} />
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${statusCfg.bg} ${statusCfg.color}`}>
+          <div className={`w-2 h-2 rounded-full ${statusCfg.dot} ${status === "running" ? "status-pulse" : ""}`} />
           {statusCfg.label}
         </div>
       </div>
 
       {/* Wallet address */}
       {address && (
-        <div className="mb-2.5 px-2 py-1 bg-surface-50 rounded-md">
-          <p className="text-[10px] font-mono text-surface-400 truncate">{address}</p>
+        <div className="mb-3 px-3 py-1.5 bg-surface-50 rounded-lg">
+          <p className="text-xs font-mono text-surface-400 truncate">{address}</p>
         </div>
       )}
 
       {/* Economy stats — 2x2 grid */}
-      <div className="grid grid-cols-2 gap-1.5 mb-2.5">
+      <div className="grid grid-cols-2 gap-2 mb-3">
         <MiniStat label="Revenue" value={formatShannons(earnings)} color="text-fiber-600" />
         <MiniStat label="Spent" value={formatShannons(spent)} color="text-blue-600" />
         <MiniStat label="Wallet" value={formatShannons(balance)} color="text-surface-700" />
@@ -102,13 +102,13 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
 
       {/* Error display */}
       {agent.error ? (
-        <div className="mb-2.5 px-2 py-1.5 bg-red-50 border border-red-100 rounded-lg text-[10px] text-red-600 leading-relaxed">
+        <div className="mb-3 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 leading-relaxed">
           {String(agent.error)}
         </div>
       ) : null}
 
       {/* Actions */}
-      <div className="flex gap-1.5">
+      <div className="flex gap-2">
         {status === "idle" && (
           <ActionButton onClick={() => handleAction("start")} variant="primary">Start</ActionButton>
         )}
@@ -134,9 +134,9 @@ export function AgentCard({ agent, onRefresh }: AgentCardProps) {
 
 function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="bg-surface-50 rounded-lg px-2 py-1.5">
-      <p className="text-[9px] uppercase tracking-wider font-medium text-surface-400">{label}</p>
-      <p className={`text-xs font-semibold truncate tabular-nums ${color ?? "text-surface-800"}`}>{value}</p>
+    <div className="bg-surface-50 rounded-xl px-3 py-2">
+      <p className="text-xs uppercase tracking-wider font-semibold text-surface-400 mb-0.5">{label}</p>
+      <p className={`text-sm font-bold truncate tabular-nums ${color ?? "text-surface-800"}`}>{value}</p>
     </div>
   );
 }
@@ -160,7 +160,7 @@ function ActionButton({
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-1 text-[11px] font-semibold rounded-lg transition-all duration-150 ${styles[variant]}`}
+      className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 ${styles[variant]}`}
     >
       {children}
     </button>
