@@ -58,6 +58,8 @@ export interface DCAAgentConfig extends BaseAgentConfig {
   intervalMs: number;
   /** Total number of purchases to execute. 0 = unlimited until budget runs out */
   totalPurchases: number;
+  /** Optional: CKB address to send payments to (another agent's address). If empty, pays self. */
+  recipientAddress?: string;
   /** Optional: UDT type script hash for purchasing a specific token */
   udtTypeScriptHash?: string;
 }
