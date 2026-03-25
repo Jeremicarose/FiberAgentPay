@@ -268,14 +268,14 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
 
                 {/* Amount label */}
                 <rect
-                  x={midX - 28} y={midY - 9}
-                  width="56" height="18" rx="4"
+                  x={midX - 34} y={midY - 10}
+                  width="68" height="20" rx="4"
                   fill="rgba(0,204,155,0.15)" stroke="#00CC9B" strokeWidth="0.5"
                 />
                 <text
-                  x={midX} y={midY + 3}
-                  textAnchor="middle" fontSize="9"
-                  fontFamily="JetBrains Mono, monospace" fontWeight="600"
+                  x={midX} y={midY + 4}
+                  textAnchor="middle" fontSize="11"
+                  fontFamily="JetBrains Mono, monospace" fontWeight="700"
                   fill="#00CC9B"
                 >
                   {fmtCkb(arc.amount)} CKB
