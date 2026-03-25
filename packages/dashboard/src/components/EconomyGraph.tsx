@@ -113,7 +113,7 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
 
   const cx = dims.w / 2;
   const cy = dims.h / 2;
-  const radius = Math.min(cx, cy) - 80;
+  const radius = Math.min(cx, cy) - 90;
 
   // Position agents in a circle
   const positions = agents.map((_, i) => {
