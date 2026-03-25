@@ -219,7 +219,7 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
             const ny = dx / len * 4;
 
             // Shorten line to not overlap node circles
-            const nodeR = 40;
+            const nodeR = 50;
             const ratio = nodeR / len;
             const sx = from.x + dx * ratio + nx;
             const sy = from.y + dy * ratio + ny;
@@ -294,20 +294,20 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
               <g key={agent.id}>
                 {/* Outer pulse ring for running agents */}
                 {isRunning && (
-                  <circle cx={pos.x} cy={pos.y} r="44" fill="none" stroke={tc.stroke} strokeWidth="1" opacity="0.3">
-                    <animate attributeName="r" values="40;50;40" dur="2.5s" repeatCount="indefinite" />
+                  <circle cx={pos.x} cy={pos.y} r="54" fill="none" stroke={tc.stroke} strokeWidth="1.5" opacity="0.3">
+                    <animate attributeName="r" values="50;62;50" dur="2.5s" repeatCount="indefinite" />
                     <animate attributeName="opacity" values="0.3;0.08;0.3" dur="2.5s" repeatCount="indefinite" />
                   </circle>
                 )}
 
                 {/* Node background */}
-                <circle cx={pos.x} cy={pos.y} r="40" fill={tc.fill} stroke={tc.stroke} strokeWidth={isRunning ? 2 : 1} opacity={isRunning ? 1 : 0.5} />
+                <circle cx={pos.x} cy={pos.y} r="50" fill={tc.fill} stroke={tc.stroke} strokeWidth={isRunning ? 2.5 : 1.5} opacity={isRunning ? 1 : 0.6} />
 
                 {/* Agent name */}
                 <text
-                  x={pos.x} y={pos.y - 10}
-                  textAnchor="middle" fontSize="11"
-                  fontFamily="DM Sans, sans-serif" fontWeight="600"
+                  x={pos.x} y={pos.y - 12}
+                  textAnchor="middle" fontSize="13"
+                  fontFamily="DM Sans, sans-serif" fontWeight="700"
                   fill="#f1f5f9"
                 >
                   {agent.name.length > 14 ? agent.name.slice(0, 13) + "\u2026" : agent.name}
@@ -316,17 +316,17 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
                 {/* Type badge */}
                 <text
                   x={pos.x} y={pos.y + 4}
-                  textAnchor="middle" fontSize="8"
-                  fontFamily="JetBrains Mono, monospace" fontWeight="500"
-                  fill={tc.stroke} opacity="0.8"
+                  textAnchor="middle" fontSize="10"
+                  fontFamily="JetBrains Mono, monospace" fontWeight="600"
+                  fill={tc.stroke} opacity="0.9"
                 >
                   {tc.label}
                 </text>
 
                 {/* Balance */}
                 <text
-                  x={pos.x} y={pos.y + 17}
-                  textAnchor="middle" fontSize="9"
+                  x={pos.x} y={pos.y + 20}
+                  textAnchor="middle" fontSize="11"
                   fontFamily="JetBrains Mono, monospace" fontWeight="600"
                   fill="#94a3b8"
                 >
