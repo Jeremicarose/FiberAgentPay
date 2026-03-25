@@ -8,13 +8,43 @@ Built for the **Claw & Order: CKB AI Agent Hackathon**.
 
 ## What It Does
 
-FiberAgentPay lets you create autonomous AI agents that manage micropayments through Fiber Network — a Lightning Network-style Layer 2 on CKB. Every payment produces a **real, verifiable CKB testnet transaction** that can be viewed on the [CKB Explorer](https://pudge.explorer.nervos.org/).
+FiberAgentPay demonstrates an **autonomous AI agent economy** where agents discover, trade, and pay each other using real cryptocurrency. Every payment is a **verifiable CKB testnet transaction** viewable on the [CKB Explorer](https://pudge.explorer.nervos.org/).
 
-| Agent | Strategy | Example |
-|-------|----------|---------|
-| **DCA** | Periodic fixed-amount purchases | Buy 61 CKB every 10 seconds, 5 times |
-| **Stream** | Continuous pay-per-second micropayments | Stream micropayments for API access (on-chain every 30s) |
-| **Commerce** | Agent-to-agent marketplace | Agents buy/sell data feeds with real CKB payments |
+### The Pipeline Economy
+
+The flagship demo is a **chained agent pipeline** where all three agent types collaborate:
+
+```
+ ┌──────────────────┐        ┌──────────────────┐
+ │  Data Provider    │◄───────│  Payment Stream   │
+ │  (Commerce)       │ stream │  (Stream)         │
+ │  Sells data feed  │ pays   │  Pays provider    │
+ └────────┬─────────┘        └────────▲──────────┘
+          │ sells to                   │ funded by
+          ▼                            │
+ ┌──────────────────┐        ┌──────────────────┐
+ │  Analyst          │───────►│  Reinvestor       │
+ │  (Commerce)       │profits │  (DCA)            │
+ │  Buys data,       │flow to │  Reinvests into   │
+ │  sells analysis   │        │  Stream agent     │
+ └──────────────────┘        └──────────────────┘
+```
+
+**How money flows:**
+1. **Analyst** (Commerce) discovers Data Provider's weather data service and pays CKB for it
+2. **Data Provider** (Commerce) earns revenue and reinvests by buying Analyst's analysis service
+3. **Payment Stream** (Stream) continuously pays Data Provider for ongoing service access
+4. **Reinvestor** (DCA) periodically sends CKB to the Stream agent to keep it funded
+
+All three agent types participate. Real CKB flows through the full cycle. Every transaction is on-chain.
+
+### Agent Types
+
+| Agent | Strategy | Pipeline Role |
+|-------|----------|---------------|
+| **Commerce** | Agent-to-agent marketplace | Data Provider sells weather data; Analyst buys data and sells analysis |
+| **Stream** | Continuous micropayments | Pays Data Provider for ongoing service access (61 CKB every 15s) |
+| **DCA** | Periodic fixed-amount purchases | Reinvests profits into the Stream agent (61 CKB every 20s) |
 
 ### How CKB Is Used
 
@@ -97,28 +127,25 @@ node packages/server/dist/index.js
 pnpm --filter @fiber-agent-pay/dashboard dev
 ```
 
-### 5. Open the dashboard
+### 5. Launch the Pipeline Economy
 
-Go to **http://localhost:5173**.
+Go to **http://localhost:5173** and click **Launch Pipeline Economy**.
 
-- **Home page** (`/`) — Landing page with project overview, features, and how-it-works
-- **Dashboard** (`/dashboard`) — Full agent management interface
+This creates 4 agents wired together, funds each with 500 CKB from your wallet, and starts them all:
+- **Data Provider** (Commerce) — sells weather data at 40 CKB/request
+- **Analyst** (Commerce) — buys data feeds, sells analysis at 80 CKB/request
+- **Payment Stream** (Stream) — continuously pays Data Provider 61 CKB every 15 seconds
+- **Reinvestor** (DCA) — sends 61 CKB to the Stream agent every 20 seconds
 
-The dashboard shows:
-- **Create Agent** panel — pick DCA, Stream, or Commerce
-- **Agent cards** — status, payments, and controls (Start/Pause/Stop)
-- **Live Feed** — real-time events with clickable CKB explorer links for on-chain transactions
-- **Wallet** — your CKB address and balance
-- **Stats** — active agents, total events, total payments
+Within seconds you'll see:
+- **Economy Graph** — 4 nodes with animated payment arrows showing money flow
+- **Live Feed** — real-time events: commerce trades, stream payments, DCA reinvestments
+- **On-Chain Transactions** — clickable links to verify each payment on CKB Explorer
+- **Agent Cards** — wallet balances, revenue, spending, and profit for each agent
 
-### 6. Create your first agent
+### Alternative: Simple 3-Agent Economy
 
-1. Go to `/dashboard`
-2. Click **DCA** in the Create Agent panel
-3. Click **Create DCA Agent**
-4. Click **Start** on the new agent card
-5. Watch the Live Feed — you'll see payment events with real CKB transaction hashes
-6. Click a transaction link to verify it on the CKB Explorer
+If you prefer a simpler demo, click **"Or launch simple 3-agent commerce economy"** to create 3 Commerce agents that trade services with each other.
 
 ---
 
@@ -204,8 +231,10 @@ FiberAgentPay/
 │   ├── fiber-client/   # Fiber Network JSON-RPC client
 │   ├── ckb-client/     # CKB SDK wrapper (wallet, transfers, payment records)
 │   ├── agents/         # Agent implementations (DCA, Stream, Commerce)
+│   │                   #   + Scheduler with createPipeline() orchestration
 │   ├── server/         # Hono HTTP + WebSocket server
 │   └── dashboard/      # React + Tailwind real-time dashboard
+│                       #   Economy Graph, Live Feed, Agent Cards
 ├── fiber-node/         # Fiber node binary + config (gitignored)
 ├── scripts/            # Setup and automation scripts
 └── .env                # Environment configuration (gitignored)
@@ -219,7 +248,7 @@ FiberAgentPay/
 ┌─────────────────────────────────────────────┐
 │              Dashboard (React)               │
 │     http://localhost:5173                    │
-│  Home page + Dashboard with agent mgmt      │
+│  Economy Graph + Live Feed + Agent Cards    │
 │  Explorer links for on-chain tx hashes      │
 └──────┬──────────────────┬───────────────────┘
        │ REST API          │ WebSocket
@@ -231,15 +260,20 @@ FiberAgentPay/
 │                                             │
 │  ┌─────────────────────────────────┐        │
 │  │       Agent Scheduler           │        │
-│  │  ┌─────┐ ┌────────┐ ┌────────┐ │        │
-│  │  │ DCA │ │ Stream │ │Commerce│ │        │
-│  │  └──┬──┘ └───┬────┘ └───┬────┘ │        │
-│  │     └────────┼──────────┘      │        │
-│  │              ▼                  │        │
-│  │        Safety Guard             │        │
-│  │   (per-tx, hourly, lifetime)    │        │
-│  └─────────────┬───────────────────┘        │
-└────────────────┼────────────────────────────┘
+│  │                                 │        │
+│  │  Pipeline Economy:              │        │
+│  │  Commerce ──► Stream ──► DCA    │        │
+│  │  (discover)  (subscribe) (invest)│       │
+│  │                                 │        │
+│  │     ┌─────┐ ┌────────┐ ┌─────┐ │        │
+│  │     │ DCA │ │ Stream │ │Comm.│ │        │
+│  │     └──┬──┘ └───┬────┘ └──┬──┘ │        │
+│  │        └────────┼─────────┘    │        │
+│  │                 ▼              │        │
+│  │          Safety Guard          │        │
+│  │    (per-tx, hourly, lifetime)  │        │
+│  └─────────────┬──────────────────┘        │
+└────────────────┼───────────────────────────┘
                  │
     ┌────────────┴────────────┐
     ▼                         ▼
@@ -261,6 +295,7 @@ FiberAgentPay/
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Server status (Fiber + wallet connectivity) |
+| `POST` | `/agents/pipeline` | Launch the full pipeline economy (4 agents) |
 | `POST` | `/agents` | Create a new agent |
 | `GET` | `/agents` | List all agents |
 | `GET` | `/agents/:id` | Get agent details |
@@ -283,9 +318,9 @@ Every agent enforces three-tier spending limits:
 
 | Limit | Default | Purpose |
 |-------|---------|---------|
-| Per-transaction | 10 CKB | Prevent single large payments |
-| Per-hour | 100 CKB | Rate limiting |
-| Lifetime total | 1,000 CKB | Budget cap |
+| Per-transaction | 100 CKB | Prevent single large payments |
+| Per-hour | 2,000 CKB | Rate limiting |
+| Lifetime total | 10,000 CKB | Budget cap |
 
 When a limit is hit, the agent **auto-pauses** and emits a `safety:limit_reached` event. You can resume it from the dashboard after reviewing.
 
