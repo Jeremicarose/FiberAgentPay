@@ -95,13 +95,13 @@ export function EconomyGraph({ agents: rawAgents, events }: { agents: unknown[];
   }, []);
 
   // Responsive sizing
-  const [dims, setDims] = useState({ w: 600, h: 360 });
+  const [dims, setDims] = useState({ w: 600, h: 440 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const measure = useCallback(() => {
     if (containerRef.current) {
       const r = containerRef.current.getBoundingClientRect();
-      setDims({ w: r.width, h: Math.max(300, Math.min(400, r.width * 0.55)) });
+      setDims({ w: r.width, h: Math.max(380, Math.min(500, r.width * 0.6)) });
     }
   }, []);
 
